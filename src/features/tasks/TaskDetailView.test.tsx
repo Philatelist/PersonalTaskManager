@@ -5,13 +5,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("./task-service", () => ({
   taskGet: vi.fn().mockResolvedValue(null),
   taskUpdate: vi.fn().mockResolvedValue({}),
+  taskDelete: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { TaskDetailView } from "./TaskDetailView";
-import { taskGet, taskUpdate } from "./task-service";
+import { taskGet, taskUpdate, taskDelete } from "./task-service";
 
 const mockedTaskGet = vi.mocked(taskGet);
 const mockedTaskUpdate = vi.mocked(taskUpdate);
+const mockedTaskDelete = vi.mocked(taskDelete);
 
 const sampleTask = {
   id: "t1",

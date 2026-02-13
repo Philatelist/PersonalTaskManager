@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTask } from "./use-task";
-import { taskUpdate } from "./task-service";
+import { taskUpdate, taskDelete } from "./task-service";
+import { StatusActions } from "./StatusActions";
 import { EditableTitle } from "./EditableTitle";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { TagEditor } from "./TagEditor";
@@ -111,6 +112,21 @@ export function TaskDetailView({
     [taskId, refresh],
   );
 
+  const handleMarkDone = useCallback(async () => {
+    await taskUpdate(taskId, { status: "done" });
+    onBack();
+  }, [taskId, onBack]);
+
+  const handleReactivate = useCallback(async () => {
+    await taskUpdate(taskId, { status: "active" });
+    await refresh();
+  }, [taskId, refresh]);
+
+  const handleDelete = useCallback(async () => {
+    await taskDelete(taskId);
+    onBack();
+  }, [taskId, onBack]);
+
   // Flush pending saves on unmount
   useEffect(() => {
     return () => {
@@ -219,6 +235,13 @@ export function TaskDetailView({
           onBlur={handleDescriptionFlush}
         />
       </div>
+
+      <StatusActions
+        status={task.status}
+        onMarkDone={handleMarkDone}
+        onReactivate={handleReactivate}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }
