@@ -1,0 +1,21 @@
+.ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.track {
+  fill: none;
+  stroke: #e0e0e0;
+  stroke-width: 3;
+}
+
+.progress {
+  fill: none;
+  stroke: #4caf50;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dashoffset 0.2s ease;
+}

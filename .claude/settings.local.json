@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm approve-builds:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm format:check:*)",
+      "Bash(pnpm format:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(pnpm build:*)",
+      "Bash(export PATH=\"$HOME/.cargo/bin:$PATH\")",
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)",
+      "Bash(echo:*)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm tsc:*)",
+      "Bash(~/.cargo/bin/cargo test:*)",
+      "Bash(ls:*)",
+      "Bash(source:*)",
+      "Bash(cargo:*)",
+      "Bash(pnpm:*)",
+      "Bash(node --version:*)",
+      "Bash(export PATH=\"$HOME/.cargo/bin:/opt/homebrew/bin:$PATH\")",
+      "Bash(export PATH=\"/opt/homebrew/bin:$PATH\")",
+      "Bash(export PATH=\"/usr/bin:/usr/local/bin:$HOME/.cargo/bin:$PATH\")",
+      "Bash(npx vitest run)",
+      "Bash(grep:*)",
+      "Bash(/Users/alex/Desktop/Work.nosync/PersonalTaskManager/.awos/scripts/create-spec-directory.sh:*)",
+      "Bash(./.awos/scripts/create-spec-directory.sh:*)"
+    ]
+  }
+}

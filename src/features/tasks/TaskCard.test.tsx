@@ -1,0 +1,175 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("./task-service", () => ({
+  taskUpdate: vi.fn().mockResolvedValue({}),
+}));
+
+import { TaskCard } from "./TaskCard";
+import { taskUpdate } from "./task-service";
+import type { TaskWithProgress } from "./use-tasks";
+
+const mockedTaskUpdate = vi.mocked(taskUpdate);
+
+function makeTask(overrides: Partial<TaskWithProgress> = {}): TaskWithProgress {
+  return {
+    id: "t1",
+    title: "Build the API",
+    description: null,
+    priorityRank: "m",
+    status: "active",
+    tags: [],
+    dueDate: null,
+    subtasks: [],
+    createdAt: "2025-01-01T00:00:00Z",
+    updatedAt: "2025-01-01T00:00:00Z",
+    progress: null,
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("TaskCard", () => {
+  it("renders priority number and title", () => {
+    render(<TaskCard globalIndex={3} task={makeTask()} onSelect={vi.fn()} />);
+    expect(screen.getByText("#3")).toBeInTheDocument();
+    expect(screen.getByText("Build the API")).toBeInTheDocument();
+  });
+
+  it("renders as an article element", () => {
+    render(<TaskCard globalIndex={1} task={makeTask()} onSelect={vi.fn()} />);
+    expect(screen.getByRole("article")).toBeInTheDocument();
+  });
+
+  it("fires onSelect with task id on card click", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(<TaskCard globalIndex={1} task={makeTask({ id: "abc" })} onSelect={onSelect} />);
+    await user.click(screen.getByTestId("task-card-abc"));
+    expect(onSelect).toHaveBeenCalledWith("abc");
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("displays the title text (truncation is CSS-only)", () => {
+    const longTitle = "A very long task title that should be truncated by CSS ellipsis";
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ title: longTitle })} onSelect={vi.fn()} />,
+    );
+    expect(screen.getByText(longTitle)).toBeInTheDocument();
+  });
+
+  // --- Drag handle tests ---
+
+  it("renders a drag handle with data-drag-handle attribute", () => {
+    render(<TaskCard globalIndex={1} task={makeTask()} onSelect={vi.fn()} />);
+    const handle = screen.getByLabelText("Drag to reorder");
+    expect(handle).toBeInTheDocument();
+    expect(handle).toHaveAttribute("data-drag-handle");
+  });
+
+  it("clicking the drag handle does NOT fire onSelect", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(<TaskCard globalIndex={1} task={makeTask()} onSelect={onSelect} />);
+    await user.click(screen.getByLabelText("Drag to reorder"));
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("clicking the card body still fires onSelect even with drag handle present", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(<TaskCard globalIndex={1} task={makeTask({ id: "t1" })} onSelect={onSelect} />);
+    await user.click(screen.getByTestId("task-card-t1"));
+    expect(onSelect).toHaveBeenCalledWith("t1");
+  });
+
+  // --- Due date tests ---
+
+  it("shows due date when present", () => {
+    render(
+      <TaskCard
+        globalIndex={1}
+        task={makeTask({ dueDate: "2025-02-15" })}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Feb 15")).toBeInTheDocument();
+  });
+
+  it("shows overdue icon for past due date", () => {
+    render(
+      <TaskCard
+        globalIndex={1}
+        task={makeTask({ dueDate: "2020-01-01" })}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("overdue-icon")).toBeInTheDocument();
+  });
+
+  it("does not show overdue icon for future due date", () => {
+    render(
+      <TaskCard
+        globalIndex={1}
+        task={makeTask({ dueDate: "2099-12-31" })}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("overdue-icon")).not.toBeInTheDocument();
+  });
+
+  it("does not show due date area when dueDate is null", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: null })} onSelect={vi.fn()} />,
+    );
+    expect(screen.queryByText(/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/)).not.toBeInTheDocument();
+  });
+
+  // --- Progress ring vs checkbox tests ---
+
+  it("renders progress ring when task has subtasks (progress !== null)", () => {
+    render(
+      <TaskCard
+        globalIndex={1}
+        task={makeTask({ progress: 0.5 })}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("renders checkbox when task has no subtasks (progress === null)", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ progress: null })} onSelect={vi.fn()} />,
+    );
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  // --- Checkbox interaction tests ---
+
+  it("checkbox click calls taskUpdate and does NOT fire onSelect", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const onUpdated = vi.fn();
+    render(
+      <TaskCard
+        globalIndex={1}
+        task={makeTask({ id: "t1", progress: null })}
+        onSelect={onSelect}
+        onUpdated={onUpdated}
+      />,
+    );
+
+    await user.click(screen.getByTestId("checkbox-t1"));
+
+    expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", { status: "done" });
+    expect(onUpdated).toHaveBeenCalledTimes(1);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+});

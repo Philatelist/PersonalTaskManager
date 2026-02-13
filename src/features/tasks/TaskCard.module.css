@@ -1,0 +1,90 @@
+.card {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.card:hover {
+  border-color: #b0b0b0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.priority {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 0.75rem;
+  color: #999;
+  font-weight: 500;
+}
+
+.title {
+  max-width: 100%;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bottom {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dueDate {
+  font-size: 0.75rem;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.overdueIcon {
+  color: #d32f2f;
+}
+
+.indicator {
+  display: flex;
+  align-items: center;
+}
+
+.dragHandle {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: grab;
+  font-size: 1rem;
+  color: #bbb;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+  touch-action: none;
+}
+
+.dragHandle:hover {
+  color: #666;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dragging {
+  opacity: 0.5;
+}
