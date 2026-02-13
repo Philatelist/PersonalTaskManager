@@ -3,21 +3,14 @@ import { useTask } from "./use-task";
 import { taskUpdate } from "./task-service";
 import { EditableTitle } from "./EditableTitle";
 import { MarkdownEditor } from "./MarkdownEditor";
+import { TagEditor } from "./TagEditor";
+import { DueDatePicker } from "./DueDatePicker";
 import styles from "./TaskDetailView.module.css";
 
 interface TaskDetailViewProps {
   taskId: string;
   priorityIndex: number;
   onBack: () => void;
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function formatTimestamp(isoStr: string): string {
@@ -27,13 +20,6 @@ function formatTimestamp(isoStr: string): string {
     day: "numeric",
     year: "numeric",
   });
-}
-
-function isOverdue(dateStr: string): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dateStr + "T00:00:00");
-  return due < today;
 }
 
 export function TaskDetailView({
@@ -98,6 +84,32 @@ export function TaskDetailView({
       taskUpdate(taskId, { description: val }).then(() => refresh());
     }
   }, [task, taskId, refresh]);
+
+  const handleAddTag = useCallback(
+    async (tag: string) => {
+      if (!task) return;
+      await taskUpdate(taskId, { tags: [...task.tags, tag] });
+      await refresh();
+    },
+    [task, taskId, refresh],
+  );
+
+  const handleRemoveTag = useCallback(
+    async (tag: string) => {
+      if (!task) return;
+      await taskUpdate(taskId, { tags: task.tags.filter((t) => t !== tag) });
+      await refresh();
+    },
+    [task, taskId, refresh],
+  );
+
+  const handleDueDateChange = useCallback(
+    async (date: string | null) => {
+      await taskUpdate(taskId, { dueDate: date });
+      await refresh();
+    },
+    [taskId, refresh],
+  );
 
   // Flush pending saves on unmount
   useEffect(() => {
@@ -179,33 +191,24 @@ export function TaskDetailView({
           #{priorityIndex}
         </span>
 
-        {task.dueDate ? (
-          <span
-            className={`${styles.dueDate} ${isOverdue(task.dueDate) ? styles.overdue : ""}`}
-            data-testid="due-date"
-          >
-            Due: {formatDate(task.dueDate)}
-          </span>
-        ) : (
-          <span className={styles.dueDate} data-testid="due-date">
-            No due date
-          </span>
-        )}
-
-        {task.tags.length > 0 && (
-          <div className={styles.tags} data-testid="tags">
-            {[...task.tags].sort().map((tag) => (
-              <span key={tag} className={styles.tag}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+        <DueDatePicker
+          dueDate={task.dueDate}
+          onChange={handleDueDateChange}
+        />
       </div>
 
       <div className={styles.timestamps} data-testid="timestamps">
         Created: {formatTimestamp(task.createdAt)} &middot; Updated:{" "}
         {formatTimestamp(task.updatedAt)}
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionLabel}>Tags</div>
+        <TagEditor
+          tags={task.tags}
+          onAdd={handleAddTag}
+          onRemove={handleRemoveTag}
+        />
       </div>
 
       <div className={styles.section}>

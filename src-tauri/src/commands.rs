@@ -261,7 +261,11 @@ pub fn update_task_impl(
     }
     if let Some(ref dd) = due_date {
         set_clauses.push("due_date = ?");
-        params.push(Box::new(dd.clone()));
+        if dd.is_empty() {
+            params.push(Box::new(None::<String>));
+        } else {
+            params.push(Box::new(dd.clone()));
+        }
     }
 
     let sql = format!("UPDATE tasks SET {} WHERE id = ?", set_clauses.join(", "));
