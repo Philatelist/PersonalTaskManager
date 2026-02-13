@@ -1,0 +1,34 @@
+.toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fafafa;
+  border-radius: 4px 4px 0 0;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: #555;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.button:hover {
+  background: #e8e8e8;
+  color: #111;
+}
+
+.button:active {
+  background: #d0d0d0;
+}
