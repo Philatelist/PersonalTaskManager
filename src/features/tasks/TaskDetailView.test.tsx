@@ -68,8 +68,8 @@ describe("TaskDetailView", () => {
     expect(tags!.indexOf("alpha")).toBeLessThan(tags!.indexOf("bug"));
     // Timestamps
     expect(screen.getByTestId("timestamps")).toBeInTheDocument();
-    // Description
-    expect(screen.getByTestId("description")).toHaveTextContent("Some notes");
+    // Description (rendered via MarkdownEditor)
+    expect(screen.getByTestId("markdown-rendered")).toHaveTextContent("Some notes");
   });
 
   it("shows 'No due date' when dueDate is null", async () => {
@@ -87,8 +87,8 @@ describe("TaskDetailView", () => {
     render(
       <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
     );
-    expect(await screen.findByTestId("description-empty")).toHaveTextContent(
-      "No notes yet",
+    expect(await screen.findByTestId("markdown-placeholder")).toHaveTextContent(
+      "Click to add notes...",
     );
   });
 

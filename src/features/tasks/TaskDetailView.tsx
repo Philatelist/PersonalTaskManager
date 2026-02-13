@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTask } from "./use-task";
 import { taskUpdate } from "./task-service";
 import { EditableTitle } from "./EditableTitle";
+import { MarkdownEditor } from "./MarkdownEditor";
 import styles from "./TaskDetailView.module.css";
 
 interface TaskDetailViewProps {
@@ -45,11 +46,14 @@ export function TaskDetailView({
   const hasRedirected = useRef(false);
   const titleValueRef = useRef<string>("");
   const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const descriptionValueRef = useRef<string>("");
+  const descriptionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Keep titleValueRef in sync
+  // Keep refs in sync
   useEffect(() => {
     if (task) {
       titleValueRef.current = task.title;
+      descriptionValueRef.current = task.description ?? "";
     }
   }, [task]);
 
@@ -67,17 +71,50 @@ export function TaskDetailView({
     [task, taskId, refresh],
   );
 
-  // Flush pending title save on unmount
+  const handleDescriptionChange = useCallback(
+    (newValue: string) => {
+      descriptionValueRef.current = newValue;
+      if (descriptionSaveTimerRef.current) {
+        clearTimeout(descriptionSaveTimerRef.current);
+      }
+      descriptionSaveTimerRef.current = setTimeout(async () => {
+        descriptionSaveTimerRef.current = null;
+        if (task && newValue !== (task.description ?? "")) {
+          await taskUpdate(taskId, { description: newValue });
+          await refresh();
+        }
+      }, 1000);
+    },
+    [task, taskId, refresh],
+  );
+
+  const handleDescriptionFlush = useCallback(() => {
+    if (descriptionSaveTimerRef.current) {
+      clearTimeout(descriptionSaveTimerRef.current);
+      descriptionSaveTimerRef.current = null;
+    }
+    const val = descriptionValueRef.current;
+    if (task && val !== (task.description ?? "")) {
+      taskUpdate(taskId, { description: val }).then(() => refresh());
+    }
+  }, [task, taskId, refresh]);
+
+  // Flush pending saves on unmount
   useEffect(() => {
     return () => {
       if (titleSaveTimerRef.current) {
         clearTimeout(titleSaveTimerRef.current);
         titleSaveTimerRef.current = null;
-        // Fire-and-forget flush
         const val = titleValueRef.current;
         if (val) {
           taskUpdate(taskId, { title: val });
         }
+      }
+      if (descriptionSaveTimerRef.current) {
+        clearTimeout(descriptionSaveTimerRef.current);
+        descriptionSaveTimerRef.current = null;
+        const val = descriptionValueRef.current;
+        taskUpdate(taskId, { description: val });
       }
     };
   }, [taskId]);
@@ -173,15 +210,11 @@ export function TaskDetailView({
 
       <div className={styles.section}>
         <div className={styles.sectionLabel}>Notes</div>
-        {task.description ? (
-          <div className={styles.description} data-testid="description">
-            {task.description}
-          </div>
-        ) : (
-          <div className={styles.placeholder} data-testid="description-empty">
-            No notes yet
-          </div>
-        )}
+        <MarkdownEditor
+          value={task.description ?? ""}
+          onChange={handleDescriptionChange}
+          onBlur={handleDescriptionFlush}
+        />
       </div>
     </div>
   );
