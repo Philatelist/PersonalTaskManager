@@ -184,4 +184,59 @@ describe("TaskDetailView", () => {
 
     expect(mockedTaskUpdate).not.toHaveBeenCalled();
   });
+
+  it("description autosave fires after debounce", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    mockedTaskUpdate.mockResolvedValue({} as never);
+
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    // Click rendered markdown to enter edit mode
+    fireEvent.click(screen.getByTestId("markdown-rendered"));
+    const textarea = screen.getByTestId("markdown-textarea");
+    fireEvent.change(textarea, { target: { value: "Updated notes" } });
+
+    // Not saved yet (before debounce)
+    expect(mockedTaskUpdate).not.toHaveBeenCalled();
+
+    // Advance past debounce (1000ms)
+    await act(async () => {
+      vi.advanceTimersByTime(1100);
+    });
+
+    expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", {
+      description: "Updated notes",
+    });
+
+    vi.useRealTimers();
+  });
+
+  it("description no-op guard skips save when value unchanged", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    mockedTaskUpdate.mockResolvedValue({} as never);
+
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    // Enter edit mode and change to same value
+    fireEvent.click(screen.getByTestId("markdown-rendered"));
+    const textarea = screen.getByTestId("markdown-textarea");
+    fireEvent.change(textarea, { target: { value: "Some notes" } });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1100);
+    });
+
+    // "Some notes" === task.description → no-op
+    expect(mockedTaskUpdate).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
 });
