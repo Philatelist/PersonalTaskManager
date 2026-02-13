@@ -1,0 +1,21 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.addInput {
+  margin-top: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.addInput:focus {
+  border-color: #1976d2;
+}
