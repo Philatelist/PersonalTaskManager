@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTask } from "./use-task";
+import { taskUpdate } from "./task-service";
+import { EditableTitle } from "./EditableTitle";
 import styles from "./TaskDetailView.module.css";
 
 interface TaskDetailViewProps {
@@ -38,9 +40,47 @@ export function TaskDetailView({
   priorityIndex,
   onBack,
 }: TaskDetailViewProps) {
-  const { task, loading } = useTask(taskId);
+  const { task, loading, refresh } = useTask(taskId);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const hasRedirected = useRef(false);
+  const titleValueRef = useRef<string>("");
+  const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep titleValueRef in sync
+  useEffect(() => {
+    if (task) {
+      titleValueRef.current = task.title;
+    }
+  }, [task]);
+
+  const handleTitleSave = useCallback(
+    async (newTitle: string) => {
+      if (task && newTitle === task.title) return; // no-op guard
+      titleValueRef.current = newTitle;
+      if (titleSaveTimerRef.current) {
+        clearTimeout(titleSaveTimerRef.current);
+        titleSaveTimerRef.current = null;
+      }
+      await taskUpdate(taskId, { title: newTitle });
+      await refresh();
+    },
+    [task, taskId, refresh],
+  );
+
+  // Flush pending title save on unmount
+  useEffect(() => {
+    return () => {
+      if (titleSaveTimerRef.current) {
+        clearTimeout(titleSaveTimerRef.current);
+        titleSaveTimerRef.current = null;
+        // Fire-and-forget flush
+        const val = titleValueRef.current;
+        if (val) {
+          taskUpdate(taskId, { title: val });
+        }
+      }
+    };
+  }, [taskId]);
 
   // Redirect on not found / error
   useEffect(() => {
@@ -88,9 +128,7 @@ export function TaskDetailView({
         &larr; Back to Grid
       </button>
 
-      <h1 className={styles.title} data-testid="task-title">
-        {task.title}
-      </h1>
+      <EditableTitle value={task.title} onSave={handleTitleSave} />
 
       <div className={styles.metadata} data-testid="task-metadata">
         <span
