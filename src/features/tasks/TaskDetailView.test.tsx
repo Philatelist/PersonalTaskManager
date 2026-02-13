@@ -299,4 +299,55 @@ describe("TaskDetailView", () => {
 
     vi.useRealTimers();
   });
+
+  it("Mark as Done calls taskUpdate with status done then onBack", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    mockedTaskUpdate.mockResolvedValue({} as never);
+    const onBack = vi.fn();
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={onBack} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("mark-done-button"));
+    });
+
+    expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", { status: "done" });
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it("Delete calls taskDelete then onBack", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    mockedTaskDelete.mockResolvedValue(undefined);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onBack = vi.fn();
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={onBack} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("delete-button"));
+    });
+
+    expect(mockedTaskDelete).toHaveBeenCalledWith("t1");
+    expect(onBack).toHaveBeenCalledOnce();
+    vi.restoreAllMocks();
+  });
+
+  it("Reactivate calls taskUpdate with status active", async () => {
+    mockedTaskGet.mockResolvedValue({ ...sampleTask, status: "done" });
+    mockedTaskUpdate.mockResolvedValue({} as never);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("reactivate-button"));
+    });
+
+    expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", { status: "active" });
+  });
 });
