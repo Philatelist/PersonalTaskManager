@@ -1,0 +1,47 @@
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 16px 0;
+  border-top: 1px solid #eee;
+  margin-top: 8px;
+}
+
+.actionButton {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.doneButton {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.doneButton:hover {
+  background: #c8e6c9;
+}
+
+.reactivateButton {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.reactivateButton:hover {
+  background: #bbdefb;
+}
+
+.deleteButton {
+  background: #ffebee;
+  color: #c62828;
+  margin-left: auto;
+}
+
+.deleteButton:hover {
+  background: #ffcdd2;
+}
