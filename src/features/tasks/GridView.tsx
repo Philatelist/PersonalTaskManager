@@ -15,13 +15,15 @@ interface ContextMenuState {
 }
 
 interface GridViewProps {
-  onSelectTask: (id: string) => void;
+  onSelectTask: (id: string, priorityIndex: number) => void;
+  initialPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
-export function GridView({ onSelectTask }: GridViewProps) {
+export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewProps) {
   const { tasks, setTasks, loading, refresh } = useTasks();
   const { cols, cardsPerPage, containerRef } = useGridLayout();
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage ?? 1);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const movedTaskIdRef = useRef<string | null>(null);
   const tasksVersionRef = useRef(0);
@@ -37,6 +39,11 @@ export function GridView({ onSelectTask }: GridViewProps) {
       setCurrentPage(totalPages);
     }
   }, [totalPages, currentPage]);
+
+  // Notify parent of page changes for state preservation
+  useEffect(() => {
+    onPageChange?.(currentPage);
+  }, [currentPage, onPageChange]);
 
   // Restore focus to the moved card's drag handle after reorder
   useEffect(() => {

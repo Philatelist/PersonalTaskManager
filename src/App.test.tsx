@@ -5,19 +5,35 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock the task-service module so we never call into Tauri invoke
 vi.mock("./features/tasks/task-service", () => ({
   taskList: vi.fn().mockResolvedValue([]),
+  taskGet: vi.fn().mockResolvedValue(null),
   taskCreate: vi.fn().mockResolvedValue({}),
   taskUpdate: vi.fn().mockResolvedValue({}),
   taskDelete: vi.fn().mockResolvedValue(undefined),
 }));
 
 import App from "./App";
-import { taskList } from "./features/tasks/task-service";
+import { taskList, taskGet } from "./features/tasks/task-service";
 
 const mockedTaskList = vi.mocked(taskList);
+const mockedTaskGet = vi.mocked(taskGet);
+
+const sampleTask = {
+  id: "t1",
+  title: "Click me",
+  description: null,
+  priorityRank: "m",
+  status: "active" as const,
+  tags: [],
+  dueDate: null,
+  subtasks: [],
+  createdAt: "2025-01-01T00:00:00Z",
+  updatedAt: "2025-01-01T00:00:00Z",
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockedTaskList.mockResolvedValue([]);
+  mockedTaskGet.mockResolvedValue(null);
 });
 
 describe("App", () => {
@@ -43,59 +59,36 @@ describe("App", () => {
     expect(screen.getByTestId("task-grid")).toBeInTheDocument();
   });
 
-  it("shows detail placeholder when a card is clicked", async () => {
+  it("shows detail view when a card is clicked", async () => {
     const user = userEvent.setup();
-    mockedTaskList.mockResolvedValue([
-      {
-        id: "t1",
-        title: "Click me",
-        description: null,
-        priorityRank: "m",
-        status: "active",
-        tags: [],
-        dueDate: null,
-        subtasks: [],
-        createdAt: "2025-01-01T00:00:00Z",
-        updatedAt: "2025-01-01T00:00:00Z",
-      },
-    ]);
+    mockedTaskList.mockResolvedValue([sampleTask]);
+    mockedTaskGet.mockResolvedValue(sampleTask);
 
     render(<App />);
 
     await user.click(await screen.findByTestId("task-card-t1"));
 
-    expect(screen.getByText(/Task detail placeholder: t1/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+    expect(await screen.findByTestId("task-detail-view")).toBeInTheDocument();
+    expect(screen.getByTestId("task-title")).toHaveTextContent("Click me");
+    expect(screen.getByTestId("back-button")).toBeInTheDocument();
     expect(screen.queryByTestId("task-grid")).not.toBeInTheDocument();
   });
 
   it("navigates back from detail to grid", async () => {
     const user = userEvent.setup();
-    mockedTaskList.mockResolvedValue([
-      {
-        id: "t1",
-        title: "My task",
-        description: null,
-        priorityRank: "m",
-        status: "active",
-        tags: [],
-        dueDate: null,
-        subtasks: [],
-        createdAt: "2025-01-01T00:00:00Z",
-        updatedAt: "2025-01-01T00:00:00Z",
-      },
-    ]);
+    mockedTaskList.mockResolvedValue([sampleTask]);
+    mockedTaskGet.mockResolvedValue(sampleTask);
 
     render(<App />);
 
     // Click card to go to detail
     await user.click(await screen.findByTestId("task-card-t1"));
-    expect(screen.getByText(/Task detail placeholder/)).toBeInTheDocument();
+    expect(await screen.findByTestId("task-detail-view")).toBeInTheDocument();
 
     // Click back
-    await user.click(screen.getByRole("button", { name: /back/i }));
+    await user.click(screen.getByTestId("back-button"));
 
     expect(await screen.findByTestId("task-grid")).toBeInTheDocument();
-    expect(screen.queryByText(/Task detail placeholder/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("task-detail-view")).not.toBeInTheDocument();
   });
 });

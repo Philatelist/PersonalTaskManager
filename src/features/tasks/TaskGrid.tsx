@@ -25,7 +25,7 @@ interface TaskGridProps {
   columns: number;
   startIndex?: number;
   allTasks?: TaskWithProgress[];
-  onSelectTask: (id: string) => void;
+  onSelectTask: (id: string, priorityIndex: number) => void;
   onUpdated?: () => void;
   onReorder?: (taskId: string, afterId: string | null) => void;
   onDragStart?: () => void;
@@ -122,7 +122,7 @@ export function TaskGrid({
               key={task.id}
               globalIndex={startIndex + index + 1}
               task={task}
-              onSelect={onSelectTask}
+              onSelect={(_id: string) => onSelectTask(task.id, startIndex + index + 1)}
               onUpdated={onUpdated}
               onContextMenu={onCardContextMenu}
             />
