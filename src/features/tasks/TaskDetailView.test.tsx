@@ -8,9 +8,10 @@ vi.mock("./task-service", () => ({
 }));
 
 import { TaskDetailView } from "./TaskDetailView";
-import { taskGet } from "./task-service";
+import { taskGet, taskUpdate } from "./task-service";
 
 const mockedTaskGet = vi.mocked(taskGet);
+const mockedTaskUpdate = vi.mocked(taskUpdate);
 
 const sampleTask = {
   id: "t1",
@@ -144,5 +145,43 @@ describe("TaskDetailView", () => {
     expect(await screen.findByTestId("status-badge")).toHaveTextContent(
       "done",
     );
+  });
+
+  it("calls taskUpdate when title is edited to a new value", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    mockedTaskUpdate.mockResolvedValue({} as never);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    // Click title to edit
+    fireEvent.click(screen.getByTestId("task-title"));
+    const input = screen.getByTestId("editable-title-input");
+    fireEvent.change(input, { target: { value: "New Title" } });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+    });
+
+    expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", {
+      title: "New Title",
+    });
+  });
+
+  it("does not call taskUpdate when title is unchanged (no-op guard)", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    // Click title to edit, then Enter without changing
+    fireEvent.click(screen.getByTestId("task-title"));
+    const input = screen.getByTestId("editable-title-input");
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+    });
+
+    expect(mockedTaskUpdate).not.toHaveBeenCalled();
   });
 });
