@@ -217,6 +217,62 @@ describe("TaskDetailView", () => {
     vi.useRealTimers();
   });
 
+  it("tag add calls taskUpdate with updated tags array", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    mockedTaskUpdate.mockResolvedValue({} as never);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    const input = screen.getByTestId("tag-input");
+    fireEvent.change(input, { target: { value: "newTag" } });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+    });
+
+    expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", {
+      tags: ["bug", "alpha", "newTag"],
+    });
+  });
+
+  it("tag remove calls taskUpdate with filtered tags array", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    mockedTaskUpdate.mockResolvedValue({} as never);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("tag-remove-bug"));
+    });
+
+    expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", {
+      tags: ["alpha"],
+    });
+  });
+
+  it("due date change calls taskUpdate with new date", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    mockedTaskUpdate.mockResolvedValue({} as never);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    // Click to edit due date
+    fireEvent.click(screen.getByTestId("due-date-display"));
+    const dateInput = screen.getByTestId("due-date-input");
+    await act(async () => {
+      fireEvent.change(dateInput, { target: { value: "2025-12-25" } });
+    });
+
+    expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", {
+      dueDate: "2025-12-25",
+    });
+  });
+
   it("description no-op guard skips save when value unchanged", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockedTaskGet.mockResolvedValue(sampleTask);
