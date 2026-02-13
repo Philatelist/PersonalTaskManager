@@ -1,0 +1,76 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.row:hover .deleteButton {
+  opacity: 1;
+}
+
+.dragHandle {
+  cursor: grab;
+  color: #bbb;
+  font-size: 14px;
+  user-select: none;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.checkbox {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.checkbox:disabled {
+  cursor: default;
+}
+
+.label {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.labelDone {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.deleteButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.deleteButton:hover {
+  color: #d32f2f;
+  background: #ffebee;
+}
+
+.dragging {
+  opacity: 0.5;
+}
