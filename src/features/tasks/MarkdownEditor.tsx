@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Markdown } from "react-markdown";
+import Markdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import { MarkdownToolbar } from "./MarkdownToolbar";
 import styles from "./MarkdownEditor.module.css";
