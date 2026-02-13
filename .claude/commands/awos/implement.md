@@ -25,6 +25,11 @@ when truly necessary**.
     **≤ 12 bullets**.
 5.  **No refactors** unless required to complete the sub-task.
 6.  **Do not mark done** unless verification passes.
+7.  **Git policy**:
+    -   Work **ONLY** on branch `dev`
+    -   **One commit per /awos:implement run** (not per sub-task)
+    -   Commit + push **only after** verification succeeds and `tasks.md` is updated
+    -   Never commit secrets (`.env*`, tokens, credentials)
 
 ------------------------------------------------------------------------
 
@@ -38,16 +43,22 @@ Use a subagent **only if** at least one is true:
     details.
 -   You need **UI wiring + tests** and scope is clearly broad.
 
-If you use a subagent: - Pass only: sub-task text + acceptance
-criteria + file paths + ≤12 bullets constraints. - Instruction: "Be
-concise. No long explanations. Return only changed files + verify
-commands." - Cap output: **≤ 200 lines**.
+If you use a subagent:
+- Pass only: sub-task text + acceptance criteria + file paths + ≤12 bullets constraints.
+- Instruction: "Be concise. No long explanations. Return only changed files + verify commands."
+- Cap output: **≤ 200 lines**.
 
 Otherwise: implement directly.
 
 ------------------------------------------------------------------------
 
 ## Execution Steps
+
+### 0) Branch Guard (Must)
+
+-   Run: `git branch --show-current`
+-   If not `dev`: **STOP** (do not implement, do not commit, do not push).
+    -   Ask the user to switch to `dev`, or explicitly approve switching.
 
 ### 1) Locate Target
 
@@ -72,36 +83,68 @@ Otherwise: implement directly.
 
 ### 4) Verify
 
-Run what the sub-task requires (prefer fastest): - Rust: `cargo test` /
-`cargo check` - Frontend: `pnpm test` - Manual: `pnpm tauri dev` only
-when needed
+Run what the sub-task requires (prefer fastest):
+- Rust: `cargo test` / `cargo check`
+- Frontend: `pnpm test` (or `pnpm vitest`)
+- Manual: `pnpm tauri dev` only when needed
 
-If verification fails: - Fix and re-run. - If still stuck: stop and
-report "blocked" (no checkbox updates).
+If verification fails:
+- Fix and re-run.
+- If still stuck: stop and report "blocked" (no checkbox updates).
 
 ### 5) Update tasks.md
 
 -   Mark **only the implemented sub-task** `[ ]` → `[x]`.
 -   Do not reorder or rewrite other tasks.
 
+### 6) Commit + Push (Single Commit per Run)
+
+Do this **only if**:
+- verification succeeded, and
+- `tasks.md` was updated, and
+- current branch is `dev`.
+
+Steps:
+1.  Show state:
+    -   `git status`
+    -   `git diff`
+2.  Stage all:
+    -   `git add -A`
+3.  Commit (one commit for the whole run). Use a concise message:
+    -   `git commit -m "<type>(<scope>): <summary>"`
+    -   Examples:
+        -   `feat(board): add basic dnd column drop`
+        -   `test(detail): add markdown editor tests`
+        -   `chore(ci): stabilize tauri build`
+4.  Push:
+    -   `git push`
+
+If there are **no staged changes**, do **not** create an empty commit.
+
 ------------------------------------------------------------------------
 
 ## Output Format (Short)
 
--   ✔ Implemented: `<sub-task name>`{=html}
+-   ✔ Implemented: `<sub-task name>`
 -   Files changed:
     -   path1
     -   path2
 -   Verification:
-    -   `<commands run>`{=html}
+    -   `<commands run>`
+-   Git:
+    -   branch: `dev`
+    -   commit: `<hash>`
+    -   push: `git push`
 -   Notes (optional, ≤5 bullets)
 
 ------------------------------------------------------------------------
 
 ## Stop Conditions
 
-Stop and report "blocked" if: - Spec conflict - Missing decision - Would
-require major refactor beyond the slice
+Stop and report "blocked" if:
+- Spec conflict
+- Missing decision
+- Would require major refactor beyond the slice
 
 Do not guess. Ask for the smallest decision needed.
 
