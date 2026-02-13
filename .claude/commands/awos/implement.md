@@ -25,11 +25,15 @@ when truly necessary**.
     **≤ 12 bullets**.
 5.  **No refactors** unless required to complete the sub-task.
 6.  **Do not mark done** unless verification passes.
-7.  **Git policy**:
-    -   Work **ONLY** on branch `dev`
-    -   **One commit per /awos:implement run** (not per sub-task)
-    -   Commit + push **only after** verification succeeds and `tasks.md` is updated
-    -   Never commit secrets (`.env*`, tokens, credentials)
+
+7.  **Git policy (feature branch → dev)**:
+    - Code changes must go to a feature branch derived from the prompt name:
+      `feature/<slug>`
+    - The feature branch MUST be created from `dev`
+    - Commit + push only after verification succeeds AND `tasks.md` is updated
+    - Then merge feature → dev and push dev
+    - Do NOT delete the feature branch
+    - Never commit secrets (`.env*`, tokens, credentials)
 
 ------------------------------------------------------------------------
 
@@ -54,34 +58,44 @@ Otherwise: implement directly.
 
 ## Execution Steps
 
-### 0) Branch Guard (Must)
+### 0) Compute topic + feature branch (Must)
 
--   Run: `git branch --show-current`
--   If not `dev`: **STOP** (do not implement, do not commit, do not push).
-    -   Ask the user to switch to `dev`, or explicitly approve switching.
+- If implement was initiated for a topic prompt like:
+  `/awos:spec|tech|tasks @awos_prompts/<nn>-<topic>.md`
+  derive:
+  - topic = `<topic>` with dashes → spaces
+  - slug = first 3 words joined by `-`
+  - feature branch = `feature/<slug>`
+  - Example: `01-core-task-model-subtasks-progress.md` → `feature/core-task-model`
 
-### 1) Locate Target
+### 1) Ensure feature branch is created from dev (Must)
+
+Run:
+- `git checkout dev`
+- `git pull`
+- `git checkout feature/<slug>` OR (if missing) `git checkout -b feature/<slug>`
+
+From this point, all changes are on the feature branch.
+
+### 2) Locate Target
 
 -   Open `context/spec/<feature>/tasks.md`.
 -   Find the first Slice containing unchecked items.
 -   Pick the **first** unchecked sub-task (`- [ ] ...`). That is the
     only target.
 
-### 2) Extract Minimal Requirements
+### 3) Extract Minimal Requirements
 
 -   If needed, read only the relevant spec sections.
--   Produce a constraints list (≤12 bullets). Example:
-    -   SQLite: `PRAGMA foreign_keys=ON`, WAL enabled
-    -   DTO: `task_get` includes tags
-    -   etc.
+-   Produce a constraints list (≤12 bullets).
 
-### 3) Implement
+### 4) Implement
 
 -   Change only what is required.
 -   Prefer small, readable patches.
 -   Avoid unrelated cleanup.
 
-### 4) Verify
+### 5) Verify
 
 Run what the sub-task requires (prefer fastest):
 - Rust: `cargo test` / `cargo check`
@@ -90,19 +104,19 @@ Run what the sub-task requires (prefer fastest):
 
 If verification fails:
 - Fix and re-run.
-- If still stuck: stop and report "blocked" (no checkbox updates).
+- If still stuck: stop and report "blocked" (no checkbox updates, no commit/push).
 
-### 5) Update tasks.md
+### 6) Update tasks.md
 
 -   Mark **only the implemented sub-task** `[ ]` → `[x]`.
 -   Do not reorder or rewrite other tasks.
 
-### 6) Commit + Push (Single Commit per Run)
+### 7) Commit + Push on feature branch (Single Commit per Run)
 
 Do this **only if**:
 - verification succeeded, and
 - `tasks.md` was updated, and
-- current branch is `dev`.
+- current branch is `feature/<slug>`.
 
 Steps:
 1.  Show state:
@@ -113,28 +127,43 @@ Steps:
 3.  Commit (one commit for the whole run). Use a concise message:
     -   `git commit -m "<type>(<scope>): <summary>"`
     -   Examples:
-        -   `feat(board): add basic dnd column drop`
-        -   `test(detail): add markdown editor tests`
-        -   `chore(ci): stabilize tauri build`
-4.  Push:
-    -   `git push`
+        -   `feat(board): add basic dnd reorder`
+        -   `test(detail): cover markdown editor`
+        -   `fix(store): persist selection reliably`
+4.  Push feature branch:
+    -   First push: `git push -u origin feature/<slug>`
+    -   Next pushes: `git push`
 
 If there are **no staged changes**, do **not** create an empty commit.
+
+### 8) Merge feature → dev and push dev (Must, after successful feature push)
+
+Run:
+- `git checkout dev`
+- `git pull`
+- `git merge --no-ff feature/<slug>`
+- `git push`
+
+Do NOT delete the feature branch (keep it on remote).
 
 ------------------------------------------------------------------------
 
 ## Output Format (Short)
 
 -   ✔ Implemented: `<sub-task name>`
+-   Topic: `<topic>`
+-   Branches:
+    - feature: `feature/<slug>`
+    - merged into: `dev`
 -   Files changed:
     -   path1
     -   path2
 -   Verification:
     -   `<commands run>`
 -   Git:
-    -   branch: `dev`
-    -   commit: `<hash>`
-    -   push: `git push`
+    - feature commit: `<hash>`
+    - dev merge commit (if any): `<hash>`
+    - pushes: feature + dev
 -   Notes (optional, ≤5 bullets)
 
 ------------------------------------------------------------------------
