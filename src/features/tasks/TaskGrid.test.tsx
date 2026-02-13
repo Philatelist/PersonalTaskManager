@@ -64,7 +64,7 @@ describe("TaskGrid", () => {
       <TaskGrid tasks={tasks} columns={2} onSelectTask={onSelectTask} />,
     );
     fireEvent.click(screen.getByTestId("task-card-t1"));
-    expect(onSelectTask).toHaveBeenCalledWith("t1");
+    expect(onSelectTask).toHaveBeenCalledWith("t1", 1);
   });
 
   it("page-boundary: page 2 tasks receive allTasks for cross-page afterId resolution", () => {
