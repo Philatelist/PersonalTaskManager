@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTask } from "./use-task";
-import { taskUpdate, taskDelete } from "./task-service";
+import { taskUpdate, taskDelete, subtaskUpdate, subtaskDelete } from "./task-service";
 import { StatusActions } from "./StatusActions";
+import { SubtaskSection } from "./SubtaskSection";
 import { EditableTitle } from "./EditableTitle";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { TagEditor } from "./TagEditor";
@@ -127,6 +128,22 @@ export function TaskDetailView({
     onBack();
   }, [taskId, onBack]);
 
+  const handleSubtaskToggle = useCallback(
+    async (subtaskId: string, isDone: boolean) => {
+      await subtaskUpdate(subtaskId, { isDone });
+      await refresh();
+    },
+    [refresh],
+  );
+
+  const handleSubtaskDelete = useCallback(
+    async (subtaskId: string) => {
+      await subtaskDelete(subtaskId);
+      await refresh();
+    },
+    [refresh],
+  );
+
   // Flush pending saves on unmount
   useEffect(() => {
     return () => {
@@ -233,6 +250,17 @@ export function TaskDetailView({
           value={task.description ?? ""}
           onChange={handleDescriptionChange}
           onBlur={handleDescriptionFlush}
+        />
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionLabel}>Subtasks</div>
+        <SubtaskSection
+          subtasks={task.subtasks}
+          taskId={taskId}
+          onToggle={handleSubtaskToggle}
+          onDelete={handleSubtaskDelete}
+          onUpdated={refresh}
         />
       </div>
 

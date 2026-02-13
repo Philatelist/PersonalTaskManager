@@ -6,14 +6,20 @@ vi.mock("./task-service", () => ({
   taskGet: vi.fn().mockResolvedValue(null),
   taskUpdate: vi.fn().mockResolvedValue({}),
   taskDelete: vi.fn().mockResolvedValue(undefined),
+  subtaskUpdate: vi.fn().mockResolvedValue({}),
+  subtaskDelete: vi.fn().mockResolvedValue(undefined),
+  subtaskCreate: vi.fn().mockResolvedValue({}),
+  subtaskReorder: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { TaskDetailView } from "./TaskDetailView";
-import { taskGet, taskUpdate, taskDelete } from "./task-service";
+import { taskGet, taskUpdate, taskDelete, subtaskUpdate, subtaskDelete } from "./task-service";
 
 const mockedTaskGet = vi.mocked(taskGet);
 const mockedTaskUpdate = vi.mocked(taskUpdate);
 const mockedTaskDelete = vi.mocked(taskDelete);
+const mockedSubtaskUpdate = vi.mocked(subtaskUpdate);
+const mockedSubtaskDelete = vi.mocked(subtaskDelete);
 
 const sampleTask = {
   id: "t1",
