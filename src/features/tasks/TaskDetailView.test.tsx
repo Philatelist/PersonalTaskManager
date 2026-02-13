@@ -57,15 +57,16 @@ describe("TaskDetailView", () => {
     expect(screen.getByTestId("status-badge")).toHaveTextContent("active");
     // Priority
     expect(screen.getByTestId("priority-number")).toHaveTextContent("#3");
-    // Due date
-    expect(screen.getByTestId("due-date")).toHaveTextContent("Due:");
-    // Tags (sorted alphabetically)
-    expect(screen.getByTestId("tags")).toBeInTheDocument();
-    const tags = screen.getByTestId("tags").textContent;
-    expect(tags).toContain("alpha");
-    expect(tags).toContain("bug");
+    // Due date (via DueDatePicker)
+    expect(screen.getByTestId("due-date-picker")).toBeInTheDocument();
+    expect(screen.getByTestId("due-date-display")).toBeInTheDocument();
+    // Tags (via TagEditor, sorted alphabetically)
+    expect(screen.getByTestId("tag-editor")).toBeInTheDocument();
+    const tagChips = screen.getByTestId("tag-chips")!.textContent;
+    expect(tagChips).toContain("alpha");
+    expect(tagChips).toContain("bug");
     // alpha should come before bug (alphabetical)
-    expect(tags!.indexOf("alpha")).toBeLessThan(tags!.indexOf("bug"));
+    expect(tagChips!.indexOf("alpha")).toBeLessThan(tagChips!.indexOf("bug"));
     // Timestamps
     expect(screen.getByTestId("timestamps")).toBeInTheDocument();
     // Description (rendered via MarkdownEditor)
@@ -77,7 +78,7 @@ describe("TaskDetailView", () => {
     render(
       <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
     );
-    expect(await screen.findByTestId("due-date")).toHaveTextContent(
+    expect(await screen.findByTestId("due-date-display")).toHaveTextContent(
       "No due date",
     );
   });
@@ -92,13 +93,14 @@ describe("TaskDetailView", () => {
     );
   });
 
-  it("hides tags section when tags array is empty", async () => {
+  it("hides tag chips when tags array is empty", async () => {
     mockedTaskGet.mockResolvedValue({ ...sampleTask, tags: [] });
     render(
       <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
     );
     await screen.findByTestId("task-detail-view");
-    expect(screen.queryByTestId("tags")).not.toBeInTheDocument();
+    expect(screen.getByTestId("tag-editor")).toBeInTheDocument();
+    expect(screen.queryByTestId("tag-chips")).not.toBeInTheDocument();
   });
 
   it("fires onBack when back button is clicked", async () => {

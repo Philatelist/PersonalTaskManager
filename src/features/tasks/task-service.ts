@@ -85,7 +85,7 @@ export async function taskUpdate(
     title?: string;
     description?: string;
     status?: string;
-    dueDate?: string;
+    dueDate?: string | null;
     tags?: string[];
   },
 ): Promise<Task> {
@@ -94,7 +94,7 @@ export async function taskUpdate(
     title: fields.title ?? null,
     description: fields.description ?? null,
     status: fields.status ?? null,
-    dueDate: fields.dueDate ?? null,
+    dueDate: fields.dueDate === null ? "" : (fields.dueDate ?? null),
     tags: fields.tags ?? null,
   });
   return toTask(response);
