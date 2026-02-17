@@ -25,10 +25,17 @@ export function SubtaskItem({ subtask, onToggle, onDelete }: SubtaskItemProps) {
   };
 
   const isTaskRef = subtask.type === "taskref";
-  const displayLabel =
-    isTaskRef
+  const isDeletedRef = isTaskRef && subtask.refTaskStatus === "deleted";
+  const isRefDone = isTaskRef && subtask.refTaskStatus === "done";
+
+  const displayLabel = isDeletedRef
+    ? "Deleted task"
+    : isTaskRef
       ? (subtask.refTaskTitle ?? "Linked task")
       : (subtask.label ?? "");
+
+  const checkboxChecked = isTaskRef ? isRefDone : subtask.isDone;
+  const labelDone = isTaskRef ? isRefDone : subtask.isDone;
 
   return (
     <div
@@ -50,18 +57,27 @@ export function SubtaskItem({ subtask, onToggle, onDelete }: SubtaskItemProps) {
       <input
         type="checkbox"
         className={styles.checkbox}
-        checked={subtask.isDone}
+        checked={checkboxChecked}
         disabled={isTaskRef}
         onChange={() => onToggle(subtask.id, !subtask.isDone)}
         data-testid={`subtask-checkbox-${subtask.id}`}
       />
 
       <span
-        className={`${styles.label}${subtask.isDone ? ` ${styles.labelDone}` : ""}`}
+        className={`${styles.label}${labelDone ? ` ${styles.labelDone}` : ""}${isDeletedRef ? ` ${styles.labelDeleted}` : ""}`}
         data-testid={`subtask-label-${subtask.id}`}
       >
         {displayLabel}
       </span>
+
+      {isTaskRef && !isDeletedRef && subtask.refTaskStatus && (
+        <span
+          className={`${styles.refStatusBadge}${subtask.refTaskStatus === "done" ? ` ${styles.refStatusDone}` : ""}`}
+          data-testid={`subtask-ref-status-${subtask.id}`}
+        >
+          {subtask.refTaskStatus}
+        </span>
+      )}
 
       <button
         className={styles.deleteButton}
