@@ -514,6 +514,12 @@ pub fn create_subtask_impl(
         let rtid = ref_task_id
             .as_ref()
             .ok_or_else(|| "TaskRef subtask requires ref_task_id".to_string())?;
+
+        // Self-reference check.
+        if rtid == &task_id {
+            return Err("A task cannot reference itself".to_string());
+        }
+
         conn.query_row(
             "SELECT id FROM tasks WHERE id = ?1",
             [rtid],
@@ -525,6 +531,18 @@ pub fn create_subtask_impl(
             }
             other => other.to_string(),
         })?;
+
+        // Circular reference check: does the target task already have a taskref back to us?
+        let circular_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM subtasks WHERE task_id = ?1 AND type = 'taskref' AND ref_task_id = ?2",
+                rusqlite::params![rtid, &task_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        if circular_count > 0 {
+            return Err("CircularTaskRefNotAllowed: the target task already references this task".to_string());
+        }
     }
 
     // Verify the parent task exists.
