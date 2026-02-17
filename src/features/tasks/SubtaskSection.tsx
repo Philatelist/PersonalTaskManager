@@ -17,6 +17,8 @@ import {
 import type { Subtask } from "./types";
 import { subtaskCreate, subtaskReorder } from "./task-service";
 import { SubtaskItem } from "./SubtaskItem";
+import { TaskRefSearchModal } from "./TaskRefSearchModal";
+import { Toast } from "./Toast";
 import styles from "./SubtaskSection.module.css";
 
 interface SubtaskSectionProps {
@@ -36,6 +38,8 @@ export function SubtaskSection({
 }: SubtaskSectionProps) {
   const [inputValue, setInputValue] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -78,6 +82,20 @@ export function SubtaskSection({
         await subtaskCreate(taskId, "checklist", trimmed);
         setInputValue("");
         onUpdated();
+      }
+    }
+  };
+
+  const handleLinkSelect = async (refTaskId: string) => {
+    try {
+      await subtaskCreate(taskId, "taskref", undefined, refTaskId);
+      onUpdated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("CircularTaskRefNotAllowed") || msg.includes("cannot reference itself")) {
+        setToastMessage("Cannot link: this would create a circular reference.");
+      } else {
+        setToastMessage("Failed to link task.");
       }
     }
   };
@@ -133,6 +151,26 @@ export function SubtaskSection({
         aria-label="Add subtask"
         data-testid="subtask-add-input"
       />
+
+      <button
+        className={styles.linkButton}
+        onClick={() => setShowLinkModal(true)}
+        data-testid="link-task-button"
+      >
+        Link task
+      </button>
+
+      {showLinkModal && (
+        <TaskRefSearchModal
+          taskId={taskId}
+          onSelect={handleLinkSelect}
+          onClose={() => setShowLinkModal(false)}
+        />
+      )}
+
+      {toastMessage && (
+        <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+      )}
     </div>
   );
 }
