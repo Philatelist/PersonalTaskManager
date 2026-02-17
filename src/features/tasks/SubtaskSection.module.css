@@ -19,3 +19,19 @@
 .addInput:focus {
   border-color: #1976d2;
 }
+
+.linkButton {
+  margin-top: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1976d2;
+  background: none;
+  border: 1px solid #1976d2;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.linkButton:hover {
+  background: #e3f2fd;
+}
