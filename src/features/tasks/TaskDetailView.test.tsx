@@ -356,4 +356,46 @@ describe("TaskDetailView", () => {
 
     expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", { status: "active" });
   });
+
+  it("subtask toggle calls subtaskUpdate then refresh", async () => {
+    const taskWithSubtasks = {
+      ...sampleTask,
+      subtasks: [
+        { id: "s1", taskId: "t1", type: "checklist" as const, label: "Item 1", isDone: false, refTaskId: null, sortOrder: 1 },
+      ],
+    };
+    mockedTaskGet.mockResolvedValue(taskWithSubtasks);
+    mockedSubtaskUpdate.mockResolvedValue({} as never);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("subtask-checkbox-s1"));
+    });
+
+    expect(mockedSubtaskUpdate).toHaveBeenCalledWith("s1", { isDone: true });
+  });
+
+  it("subtask delete calls subtaskDelete then refresh", async () => {
+    const taskWithSubtasks = {
+      ...sampleTask,
+      subtasks: [
+        { id: "s1", taskId: "t1", type: "checklist" as const, label: "Item 1", isDone: false, refTaskId: null, sortOrder: 1 },
+      ],
+    };
+    mockedTaskGet.mockResolvedValue(taskWithSubtasks);
+    mockedSubtaskDelete.mockResolvedValue(undefined);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("subtask-delete-s1"));
+    });
+
+    expect(mockedSubtaskDelete).toHaveBeenCalledWith("s1");
+  });
 });
