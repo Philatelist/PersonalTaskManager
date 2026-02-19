@@ -2896,4 +2896,53 @@ mod tests {
         assert_eq!(checklist.sort_order, 0);
         assert_eq!(taskref.sort_order, 1);
     }
+
+    #[test]
+    fn test_create_subtask_self_reference_rejected() {
+        let conn = test_db();
+        let task = create_task_impl(&conn, "Self".to_string(), None, None, None).expect("create");
+        let result = create_subtask_impl(
+            &conn, task.id.clone(), "taskref".to_string(), None, Some(task.id.clone()),
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("cannot reference itself"));
+    }
+
+    #[test]
+    fn test_create_subtask_circular_reference_rejected() {
+        let conn = test_db();
+        let task_a = create_task_impl(&conn, "A".to_string(), None, None, None).expect("create A");
+        let task_b = create_task_impl(&conn, "B".to_string(), None, None, None).expect("create B");
+
+        // A refs B (allowed)
+        create_subtask_impl(
+            &conn, task_a.id.clone(), "taskref".to_string(), None, Some(task_b.id.clone()),
+        ).expect("A refs B");
+
+        // B refs A (circular — should fail)
+        let result = create_subtask_impl(
+            &conn, task_b.id.clone(), "taskref".to_string(), None, Some(task_a.id.clone()),
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("CircularTaskRefNotAllowed"));
+    }
+
+    #[test]
+    fn test_create_subtask_non_circular_reference_allowed() {
+        let conn = test_db();
+        let task_a = create_task_impl(&conn, "A".to_string(), None, None, None).expect("create A");
+        let task_b = create_task_impl(&conn, "B".to_string(), None, None, None).expect("create B");
+        let task_c = create_task_impl(&conn, "C".to_string(), None, None, None).expect("create C");
+
+        // A refs B
+        create_subtask_impl(
+            &conn, task_a.id.clone(), "taskref".to_string(), None, Some(task_b.id.clone()),
+        ).expect("A refs B");
+
+        // C refs A (not circular — C doesn't appear in A's subtasks)
+        let result = create_subtask_impl(
+            &conn, task_c.id.clone(), "taskref".to_string(), None, Some(task_a.id.clone()),
+        );
+        assert!(result.is_ok());
+    }
 }

@@ -85,4 +85,55 @@ describe("SubtaskItem", () => {
     expect(screen.getByTestId("subtask-checkbox-s3")).toBeDisabled();
     expect(screen.getByTestId("subtask-label-s3")).toHaveTextContent("Linked Task");
   });
+
+  it("taskref with done ref shows checked and disabled checkbox", () => {
+    const taskrefDone: Subtask = {
+      ...checklistSubtask,
+      id: "s4",
+      type: "taskref",
+      label: null,
+      isDone: false,
+      refTaskId: "t2",
+      refTaskTitle: "Done Task",
+      refTaskStatus: "done",
+    };
+    renderWithDnd(taskrefDone);
+    expect(screen.getByTestId("subtask-checkbox-s4")).toBeChecked();
+    expect(screen.getByTestId("subtask-checkbox-s4")).toBeDisabled();
+  });
+
+  it("taskref with active ref shows unchecked and disabled checkbox", () => {
+    const taskrefActive: Subtask = {
+      ...checklistSubtask,
+      id: "s5",
+      type: "taskref",
+      label: null,
+      isDone: false,
+      refTaskId: "t2",
+      refTaskTitle: "Active Task",
+      refTaskStatus: "active",
+    };
+    renderWithDnd(taskrefActive);
+    expect(screen.getByTestId("subtask-checkbox-s5")).not.toBeChecked();
+    expect(screen.getByTestId("subtask-checkbox-s5")).toBeDisabled();
+    expect(screen.getByTestId("subtask-ref-status-s5")).toHaveTextContent("active");
+  });
+
+  it("deleted ref shows 'Deleted task' in label", () => {
+    const taskrefDeleted: Subtask = {
+      ...checklistSubtask,
+      id: "s6",
+      type: "taskref",
+      label: null,
+      isDone: false,
+      refTaskId: "t2",
+      refTaskTitle: "Old Task",
+      refTaskStatus: "deleted",
+    };
+    renderWithDnd(taskrefDeleted);
+    expect(screen.getByTestId("subtask-label-s6")).toHaveTextContent("Deleted task");
+    expect(screen.getByTestId("subtask-checkbox-s6")).toBeDisabled();
+    // No status badge for deleted ref
+    expect(screen.queryByTestId("subtask-ref-status-s6")).not.toBeInTheDocument();
+  });
 });
