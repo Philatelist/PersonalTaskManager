@@ -27,5 +27,5 @@ export function useTask(id: string) {
 
   const progress = task ? computeProgress(task.subtasks) : null;
 
-  return { task, progress, loading, error, refresh };
+  return { task, setTask, progress, loading, error, refresh };
 }

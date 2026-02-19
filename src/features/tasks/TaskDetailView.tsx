@@ -7,6 +7,7 @@ import { EditableTitle } from "./EditableTitle";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { TagEditor } from "./TagEditor";
 import { DueDatePicker } from "./DueDatePicker";
+import { Toast } from "./Toast";
 import styles from "./TaskDetailView.module.css";
 
 interface TaskDetailViewProps {
@@ -29,7 +30,7 @@ export function TaskDetailView({
   priorityIndex,
   onBack,
 }: TaskDetailViewProps) {
-  const { task, loading, refresh } = useTask(taskId);
+  const { task, setTask, loading, refresh } = useTask(taskId);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const hasRedirected = useRef(false);
   const titleValueRef = useRef<string>("");
@@ -90,58 +91,115 @@ export function TaskDetailView({
   const handleAddTag = useCallback(
     async (tag: string) => {
       if (!task) return;
-      await taskUpdate(taskId, { tags: [...task.tags, tag] });
-      await refresh();
+      const prevTags = task.tags;
+      setTask({ ...task, tags: [...prevTags, tag] });
+      try {
+        await taskUpdate(taskId, { tags: [...prevTags, tag] });
+        await refresh();
+      } catch {
+        setToastMessage("Failed to add tag");
+        await refresh();
+      }
     },
-    [task, taskId, refresh],
+    [task, taskId, refresh, setTask],
   );
 
   const handleRemoveTag = useCallback(
     async (tag: string) => {
       if (!task) return;
-      await taskUpdate(taskId, { tags: task.tags.filter((t) => t !== tag) });
-      await refresh();
+      setTask({ ...task, tags: task.tags.filter((t) => t !== tag) });
+      try {
+        await taskUpdate(taskId, { tags: task.tags.filter((t) => t !== tag) });
+        await refresh();
+      } catch {
+        setToastMessage("Failed to remove tag");
+        await refresh();
+      }
     },
-    [task, taskId, refresh],
+    [task, taskId, refresh, setTask],
   );
 
   const handleDueDateChange = useCallback(
     async (date: string | null) => {
-      await taskUpdate(taskId, { dueDate: date });
-      await refresh();
+      if (!task) return;
+      setTask({ ...task, dueDate: date });
+      try {
+        await taskUpdate(taskId, { dueDate: date });
+        await refresh();
+      } catch {
+        setToastMessage("Failed to update due date");
+        await refresh();
+      }
     },
-    [taskId, refresh],
+    [task, taskId, refresh, setTask],
   );
 
   const handleMarkDone = useCallback(async () => {
-    await taskUpdate(taskId, { status: "done" });
-    onBack();
+    try {
+      await taskUpdate(taskId, { status: "done" });
+      onBack();
+    } catch {
+      setToastMessage("Failed to mark as done");
+    }
   }, [taskId, onBack]);
 
   const handleReactivate = useCallback(async () => {
-    await taskUpdate(taskId, { status: "active" });
-    await refresh();
+    try {
+      await taskUpdate(taskId, { status: "active" });
+      await refresh();
+    } catch {
+      setToastMessage("Failed to reactivate");
+      await refresh();
+    }
   }, [taskId, refresh]);
 
   const handleDelete = useCallback(async () => {
-    await taskDelete(taskId);
-    onBack();
+    try {
+      await taskDelete(taskId);
+      onBack();
+    } catch {
+      setToastMessage("Failed to delete task");
+    }
   }, [taskId, onBack]);
 
   const handleSubtaskToggle = useCallback(
     async (subtaskId: string, isDone: boolean) => {
-      await subtaskUpdate(subtaskId, { isDone });
-      await refresh();
+      if (task) {
+        setTask({
+          ...task,
+          subtasks: task.subtasks.map((s) =>
+            s.id === subtaskId ? { ...s, isDone } : s,
+          ),
+        });
+      }
+      try {
+        await subtaskUpdate(subtaskId, { isDone });
+        await refresh();
+      } catch {
+        setToastMessage("Failed to update subtask");
+        await refresh();
+      }
     },
-    [refresh],
+    [task, refresh, setTask],
   );
 
   const handleSubtaskDelete = useCallback(
     async (subtaskId: string) => {
-      await subtaskDelete(subtaskId);
-      await refresh();
+      if (task) {
+        setTask({
+          ...task,
+          subtasks: task.subtasks.filter((s) => s.id !== subtaskId),
+        });
+      }
+      try {
+        await subtaskDelete(subtaskId);
+        await refresh();
+      } catch {
+        setToastMessage("Failed to delete subtask");
+        await refresh();
+      }
     },
-    [refresh],
+    [task, refresh, setTask],
   );
 
   // Flush pending saves on unmount
@@ -270,6 +328,10 @@ export function TaskDetailView({
         onReactivate={handleReactivate}
         onDelete={handleDelete}
       />
+
+      {toastMessage && (
+        <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+      )}
     </div>
   );
 }
