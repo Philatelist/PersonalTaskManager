@@ -72,6 +72,12 @@ export function EditableTitle({ value, onSave }: EditableTitleProps) {
     <h1
       className={styles.heading}
       onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") handleClick();
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label="Edit task title"
       data-testid="task-title"
     >
       {value}

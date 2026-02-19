@@ -114,6 +114,12 @@ export function MarkdownEditor({
       <div
         className={styles.placeholder}
         onClick={enterEdit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") enterEdit();
+        }}
+        tabIndex={0}
+        role="button"
+        aria-label="Add notes"
         data-testid="markdown-placeholder"
       >
         Click to add notes...
@@ -125,6 +131,12 @@ export function MarkdownEditor({
     <div
       className={styles.rendered}
       onClick={enterEdit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") enterEdit();
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label="Edit notes"
       data-testid="markdown-rendered"
     >
       <Markdown
