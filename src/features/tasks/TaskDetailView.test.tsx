@@ -398,4 +398,97 @@ describe("TaskDetailView", () => {
 
     expect(mockedSubtaskDelete).toHaveBeenCalledWith("s1");
   });
+
+  it("optimistic tag add updates UI before backend resolves", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    // Make taskUpdate never resolve to observe optimistic state
+    let resolveUpdate: () => void;
+    mockedTaskUpdate.mockReturnValue(
+      new Promise<never>((resolve) => {
+        resolveUpdate = resolve as () => void;
+      }),
+    );
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    const input = screen.getByTestId("tag-input");
+    fireEvent.change(input, { target: { value: "urgent" } });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+    });
+
+    // Tag should appear optimistically even though taskUpdate hasn't resolved
+    expect(screen.getByTestId("tag-chips")!.textContent).toContain("urgent");
+  });
+
+  it("shows error toast and reverts on backend failure for tag add", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    mockedTaskUpdate.mockRejectedValueOnce(new Error("Server error"));
+    // After revert, refresh restores original task
+    mockedTaskGet.mockResolvedValue(sampleTask);
+
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    const input = screen.getByTestId("tag-input");
+    fireEvent.change(input, { target: { value: "broken" } });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+    });
+
+    // Toast should appear with error message
+    expect(await screen.findByTestId("toast")).toHaveTextContent("Failed to add tag");
+    // After revert, the broken tag should not be in the chips
+    const tagChips = screen.getByTestId("tag-chips")!.textContent;
+    expect(tagChips).not.toContain("broken");
+  });
+
+  it("title has role=button and aria-label for keyboard access", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    const title = screen.getByTestId("task-title");
+    expect(title).toHaveAttribute("role", "button");
+    expect(title).toHaveAttribute("aria-label", "Edit task title");
+    expect(title).toHaveAttribute("tabindex", "0");
+  });
+
+  it("markdown rendered has role=button and aria-label", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    const rendered = screen.getByTestId("markdown-rendered");
+    expect(rendered).toHaveAttribute("role", "button");
+    expect(rendered).toHaveAttribute("aria-label", "Edit notes");
+  });
+
+  it("tag input has aria-label 'Add tag'", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    expect(screen.getByTestId("tag-input")).toHaveAttribute("aria-label", "Add tag");
+  });
+
+  it("subtask add input has aria-label 'Add subtask'", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    expect(screen.getByTestId("subtask-add-input")).toHaveAttribute("aria-label", "Add subtask");
+  });
 });
