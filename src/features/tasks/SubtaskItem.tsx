@@ -47,6 +47,7 @@ export function SubtaskItem({ subtask, onToggle, onDelete }: SubtaskItemProps) {
       <span
         className={styles.dragHandle}
         data-subtask-drag-handle
+        aria-label="Drag to reorder"
         data-testid={`subtask-drag-${subtask.id}`}
         {...attributes}
         {...listeners}
