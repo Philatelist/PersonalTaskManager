@@ -1,4 +1,4 @@
-use crate::models::{TaskDto, SubtaskDto};
+use crate::models::{TaskDto, SubtaskDto, DependencyEdgeDto, CreateDependencyResult};
 use rusqlite::Connection;
 
 /// Core implementation of task creation, separated from the Tauri command for testability.
@@ -934,6 +934,124 @@ pub fn task_list(
 ) -> Result<Vec<TaskDto>, String> {
     let conn = state.0.lock().unwrap();
     list_tasks_impl(&conn, status_filter, tag_filter)
+}
+
+// ===========================================================================
+// Dependencies
+// ===========================================================================
+
+pub fn create_dependency_impl(
+    conn: &Connection,
+    blocker_task_id: String,
+    dependent_task_id: String,
+) -> Result<CreateDependencyResult, String> {
+    // Reject self-dependency.
+    if blocker_task_id == dependent_task_id {
+        return Err("SelfDependencyNotAllowed".to_string());
+    }
+
+    // Validate both tasks exist and are not deleted.
+    let blocker_status: String = conn
+        .query_row(
+            "SELECT status FROM tasks WHERE id = ?1",
+            [&blocker_task_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => {
+                format!("Blocker task not found: {}", blocker_task_id)
+            }
+            other => other.to_string(),
+        })?;
+
+    if blocker_status == "deleted" {
+        return Err(format!("Blocker task is deleted: {}", blocker_task_id));
+    }
+
+    let dependent_status: String = conn
+        .query_row(
+            "SELECT status FROM tasks WHERE id = ?1",
+            [&dependent_task_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => {
+                format!("Dependent task not found: {}", dependent_task_id)
+            }
+            other => other.to_string(),
+        })?;
+
+    if dependent_status == "deleted" {
+        return Err(format!("Dependent task is deleted: {}", dependent_task_id));
+    }
+
+    // Insert the dependency row.
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+
+    conn.execute(
+        "INSERT INTO task_dependencies (id, blocker_task_id, dependent_task_id, created_at)
+         VALUES (?1, ?2, ?3, ?4)",
+        rusqlite::params![id, blocker_task_id, dependent_task_id, now],
+    )
+    .map_err(|e| {
+        let msg = e.to_string();
+        if msg.contains("UNIQUE constraint failed") {
+            "DuplicateDependency".to_string()
+        } else {
+            msg
+        }
+    })?;
+
+    Ok(CreateDependencyResult {
+        edge: DependencyEdgeDto {
+            id,
+            blocker_task_id,
+            dependent_task_id,
+        },
+        is_cyclic: false, // SCC not yet implemented — always false in Slice 1
+    })
+}
+
+pub fn delete_dependency_impl(
+    conn: &Connection,
+    dependency_id: String,
+) -> Result<(), String> {
+    let rows = conn
+        .execute(
+            "DELETE FROM task_dependencies WHERE id = ?1",
+            [&dependency_id],
+        )
+        .map_err(|e| e.to_string())?;
+
+    if rows == 0 {
+        return Err("Dependency not found".to_string());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn dependency_create(
+    blocker_task_id: String,
+    dependent_task_id: String,
+    state: tauri::State<'_, crate::DbState>,
+    backup_state: tauri::State<'_, crate::BackupState>,
+) -> Result<CreateDependencyResult, String> {
+    backup_state.maybe_backup();
+    let conn = state.0.lock().unwrap();
+    create_dependency_impl(&conn, blocker_task_id, dependent_task_id)
+}
+
+#[tauri::command]
+pub fn dependency_delete(
+    dependency_id: String,
+    state: tauri::State<'_, crate::DbState>,
+    backup_state: tauri::State<'_, crate::BackupState>,
+) -> Result<(), String> {
+    backup_state.maybe_backup();
+    let conn = state.0.lock().unwrap();
+    delete_dependency_impl(&conn, dependency_id)
 }
 
 // ===========================================================================
@@ -2964,5 +3082,123 @@ mod tests {
             &conn, task_c.id.clone(), "taskref".to_string(), None, Some(task_a.id.clone()),
         );
         assert!(result.is_ok());
+    }
+
+    // ========= Dependency CRUD tests =========
+
+    #[test]
+    fn test_create_dependency_happy_path() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+
+        let result = create_dependency_impl(&conn, a.id.clone(), b.id.clone())
+            .expect("should create dependency");
+
+        assert_eq!(result.edge.blocker_task_id, a.id);
+        assert_eq!(result.edge.dependent_task_id, b.id);
+        assert!(!result.edge.id.is_empty());
+        assert!(!result.is_cyclic); // SCC not yet — always false
+    }
+
+    #[test]
+    fn test_create_dependency_self_dep_rejected() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+
+        let result = create_dependency_impl(&conn, a.id.clone(), a.id.clone());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("SelfDependencyNotAllowed"));
+    }
+
+    #[test]
+    fn test_create_dependency_duplicate_rejected() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).expect("first should succeed");
+        let dup = create_dependency_impl(&conn, a.id.clone(), b.id.clone());
+        assert!(dup.is_err());
+        assert!(dup.unwrap_err().contains("DuplicateDependency"));
+    }
+
+    #[test]
+    fn test_create_dependency_blocker_not_found() {
+        let conn = test_db();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+
+        let result = create_dependency_impl(&conn, "nonexistent".to_string(), b.id.clone());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Blocker task not found"));
+    }
+
+    #[test]
+    fn test_create_dependency_dependent_not_found() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+
+        let result = create_dependency_impl(&conn, a.id.clone(), "nonexistent".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Dependent task not found"));
+    }
+
+    #[test]
+    fn test_create_dependency_deleted_blocker_rejected() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+
+        // Soft-delete task A.
+        update_task_impl(&conn, a.id.clone(), None, None, Some("deleted".to_string()), None, None)
+            .expect("delete A");
+
+        let result = create_dependency_impl(&conn, a.id.clone(), b.id.clone());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Blocker task is deleted"));
+    }
+
+    #[test]
+    fn test_create_dependency_deleted_dependent_rejected() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+
+        // Soft-delete task B.
+        update_task_impl(&conn, b.id.clone(), None, None, Some("deleted".to_string()), None, None)
+            .expect("delete B");
+
+        let result = create_dependency_impl(&conn, a.id.clone(), b.id.clone());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Dependent task is deleted"));
+    }
+
+    #[test]
+    fn test_delete_dependency_happy_path() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+
+        let dep = create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        let result = delete_dependency_impl(&conn, dep.edge.id.clone());
+        assert!(result.is_ok());
+
+        // Verify it's actually gone.
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM task_dependencies WHERE id = ?1",
+                [&dep.edge.id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_delete_dependency_not_found() {
+        let conn = test_db();
+        let result = delete_dependency_impl(&conn, "nonexistent".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Dependency not found"));
     }
 }

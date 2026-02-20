@@ -39,6 +39,13 @@ pub struct DependencyEdgeDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CreateDependencyResult {
+    pub edge: DependencyEdgeDto,
+    pub is_cyclic: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TaskListResult {
     pub tasks: Vec<TaskDto>,
     pub dependencies: Vec<DependencyEdgeDto>,
