@@ -7,6 +7,29 @@
   padding: 16px;
 }
 
+.header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.addButton {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 4px;
+  background: #1976d2;
+  color: #fff;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.addButton:hover {
+  background: #1565c0;
+}
+
 .gridArea {
   flex: 1;
   min-height: 0;

@@ -5,6 +5,7 @@ import { useGridLayout } from "./useGridLayout";
 import { TaskGrid } from "./TaskGrid";
 import { PaginationBar } from "./PaginationBar";
 import { EmptyState } from "./EmptyState";
+import { CreateTaskModal } from "./CreateTaskModal";
 import { taskReorder } from "./task-service";
 import { TaskCardContextMenu } from "./TaskCardContextMenu";
 import styles from "./GridView.module.css";
@@ -25,6 +26,7 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
   const { cols, cardsPerPage, containerRef } = useGridLayout();
   const [currentPage, setCurrentPage] = useState(initialPage ?? 1);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const movedTaskIdRef = useRef<string | null>(null);
   const tasksVersionRef = useRef(0);
   const dragStartVersionRef = useRef(0);
@@ -149,46 +151,59 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
     );
   }
 
-  if (tasks.length === 0) {
-    return (
-      <div className={styles.container}>
-        <EmptyState />
-      </div>
-    );
-  }
-
   const startIndex = (currentPage - 1) * cardsPerPage;
   const pageTasks = tasks.slice(startIndex, startIndex + cardsPerPage);
 
   return (
     <div className={styles.container}>
-      <div className={styles.gridArea} ref={containerRef}>
-        <TaskGrid
-          tasks={pageTasks}
-          columns={cols}
-          startIndex={startIndex}
-          allTasks={tasks}
-          onSelectTask={onSelectTask}
-          onUpdated={refresh}
-          onReorder={handleReorder}
-          onDragStart={handleDragStart}
-          onCardContextMenu={handleCardContextMenu}
-        />
+      <div className={styles.header}>
+        <button
+          className={styles.addButton}
+          onClick={() => setShowCreateModal(true)}
+          data-testid="add-task-button"
+        >
+          + Add task
+        </button>
       </div>
-      {totalPages > 1 && (
-        <PaginationBar
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
+      {tasks.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <>
+          <div className={styles.gridArea} ref={containerRef}>
+            <TaskGrid
+              tasks={pageTasks}
+              columns={cols}
+              startIndex={startIndex}
+              allTasks={tasks}
+              onSelectTask={onSelectTask}
+              onUpdated={refresh}
+              onReorder={handleReorder}
+              onDragStart={handleDragStart}
+              onCardContextMenu={handleCardContextMenu}
+            />
+          </div>
+          {totalPages > 1 && (
+            <PaginationBar
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          )}
+          {contextMenu && (
+            <TaskCardContextMenu
+              position={contextMenu.position}
+              taskId={contextMenu.taskId}
+              onMoveToTop={handleMoveToTop}
+              onMoveToBottom={handleMoveToBottom}
+              onClose={() => setContextMenu(null)}
+            />
+          )}
+        </>
       )}
-      {contextMenu && (
-        <TaskCardContextMenu
-          position={contextMenu.position}
-          taskId={contextMenu.taskId}
-          onMoveToTop={handleMoveToTop}
-          onMoveToBottom={handleMoveToBottom}
-          onClose={() => setContextMenu(null)}
+      {showCreateModal && (
+        <CreateTaskModal
+          onCreated={refresh}
+          onClose={() => setShowCreateModal(false)}
         />
       )}
     </div>

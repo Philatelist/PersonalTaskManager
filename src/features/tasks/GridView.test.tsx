@@ -22,12 +22,14 @@ vi.mock("./useGridLayout", () => ({
 vi.mock("./task-service", () => ({
   taskUpdate: vi.fn().mockResolvedValue({}),
   taskReorder: vi.fn().mockResolvedValue(undefined),
+  taskCreate: vi.fn().mockResolvedValue({ id: "new-1", title: "New Task", status: "active", tags: [], subtasks: [], priorityRank: "z0", description: null, dueDate: null, createdAt: "2025-01-01T00:00:00Z", updatedAt: "2025-01-01T00:00:00Z" }),
 }));
 
 import { GridView } from "./GridView";
-import { taskReorder } from "./task-service";
+import { taskReorder, taskCreate } from "./task-service";
 
 const mockedTaskReorder = vi.mocked(taskReorder);
+const mockedTaskCreate = vi.mocked(taskCreate);
 
 function makeTasks(count: number): TaskWithProgress[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -377,5 +379,118 @@ describe("GridView concurrent safety & optimistic revert", () => {
     expect(screen.getByText("#5")).toBeInTheDocument();
     expect(screen.getByText("#6")).toBeInTheDocument();
     expect(screen.queryByText("#1")).not.toBeInTheDocument();
+  });
+});
+
+describe("GridView task creation", () => {
+  it("shows Add task button when tasks exist", () => {
+    mockTasks = makeTasks(3);
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.getByTestId("add-task-button")).toBeInTheDocument();
+    expect(screen.getByText("+ Add task")).toBeInTheDocument();
+  });
+
+  it("shows Add task button when task list is empty", () => {
+    mockTasks = [];
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.getByTestId("add-task-button")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+  });
+
+  it("clicking Add task opens the create modal", async () => {
+    const user = userEvent.setup();
+    mockTasks = makeTasks(3);
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.queryByTestId("create-task-modal")).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("add-task-button"));
+
+    expect(screen.getByTestId("create-task-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("create-task-input")).toBeInTheDocument();
+  });
+
+  it("submitting a title calls taskCreate and refreshes the grid", async () => {
+    const user = userEvent.setup();
+    mockTasks = makeTasks(2);
+    mockCardsPerPage = 10;
+    mockRefresh.mockResolvedValue(undefined);
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    await user.click(screen.getByTestId("add-task-button"));
+    await user.type(screen.getByTestId("create-task-input"), "My new task");
+    await user.click(screen.getByTestId("create-task-submit"));
+
+    expect(mockedTaskCreate).toHaveBeenCalledWith("My new task");
+    expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it("pressing Enter submits the form", async () => {
+    const user = userEvent.setup();
+    mockTasks = makeTasks(2);
+    mockCardsPerPage = 10;
+    mockRefresh.mockResolvedValue(undefined);
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    await user.click(screen.getByTestId("add-task-button"));
+    await user.type(screen.getByTestId("create-task-input"), "Enter task{Enter}");
+
+    expect(mockedTaskCreate).toHaveBeenCalledWith("Enter task");
+    expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it("empty title shows inline error and does NOT call taskCreate", async () => {
+    const user = userEvent.setup();
+    mockTasks = makeTasks(2);
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    await user.click(screen.getByTestId("add-task-button"));
+    await user.click(screen.getByTestId("create-task-submit"));
+
+    expect(screen.getByTestId("create-task-error")).toBeInTheDocument();
+    expect(screen.getByText("Title cannot be empty")).toBeInTheDocument();
+    expect(mockedTaskCreate).not.toHaveBeenCalled();
+  });
+
+  it("whitespace-only title shows inline error", async () => {
+    const user = userEvent.setup();
+    mockTasks = makeTasks(2);
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    await user.click(screen.getByTestId("add-task-button"));
+    await user.type(screen.getByTestId("create-task-input"), "   ");
+    await user.click(screen.getByTestId("create-task-submit"));
+
+    expect(screen.getByTestId("create-task-error")).toBeInTheDocument();
+    expect(mockedTaskCreate).not.toHaveBeenCalled();
+  });
+
+  it("Cancel button closes modal without creating", async () => {
+    const user = userEvent.setup();
+    mockTasks = makeTasks(2);
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    await user.click(screen.getByTestId("add-task-button"));
+    expect(screen.getByTestId("create-task-modal")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("create-task-cancel"));
+
+    expect(screen.queryByTestId("create-task-modal")).not.toBeInTheDocument();
+    expect(mockedTaskCreate).not.toHaveBeenCalled();
+  });
+
+  it("does not show Add task button during loading", () => {
+    mockLoading = true;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.getByTestId("grid-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("add-task-button")).not.toBeInTheDocument();
   });
 });
