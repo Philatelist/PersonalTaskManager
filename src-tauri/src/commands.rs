@@ -1003,13 +1003,17 @@ pub fn create_dependency_impl(
         }
     })?;
 
+    // Check if this edge created a cycle.
+    let sccs = compute_sccs(conn)?;
+    let is_cyclic = is_in_same_scc(&sccs, &blocker_task_id, &dependent_task_id);
+
     Ok(CreateDependencyResult {
         edge: DependencyEdgeDto {
             id,
             blocker_task_id,
             dependent_task_id,
         },
-        is_cyclic: false, // SCC not yet implemented — always false in Slice 1
+        is_cyclic,
     })
 }
 
@@ -3327,6 +3331,33 @@ mod tests {
         let result = delete_dependency_impl(&conn, "nonexistent".to_string());
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Dependency not found"));
+    }
+
+    // ========= create_dependency_impl + SCC integration tests =========
+
+    #[test]
+    fn test_create_dependency_non_cyclic_returns_false() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+
+        let result = create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        assert!(!result.is_cyclic, "A→B without back-edge should not be cyclic");
+    }
+
+    #[test]
+    fn test_create_dependency_cyclic_returns_true() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+
+        // A→B: not cyclic
+        let r1 = create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        assert!(!r1.is_cyclic);
+
+        // B→A: creates cycle
+        let r2 = create_dependency_impl(&conn, b.id.clone(), a.id.clone()).unwrap();
+        assert!(r2.is_cyclic, "B→A after A→B should form a cycle");
     }
 
     // ========= SCC (Tarjan) tests =========
