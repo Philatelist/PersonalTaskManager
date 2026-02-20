@@ -11,8 +11,37 @@ pub struct TaskDto {
     pub due_date: Option<String>,
     pub tags: Vec<String>,
     pub subtasks: Vec<SubtaskDto>,
+    pub blockers: Vec<DependencyDto>,
+    pub dependents: Vec<DependencyDto>,
+    pub is_cyclic: bool,
+    pub is_blocked: bool,
+    pub unsatisfied_blocker_names: Vec<String>,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DependencyDto {
+    pub id: String,
+    pub task_id: String,
+    pub task_title: String,
+    pub task_status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DependencyEdgeDto {
+    pub id: String,
+    pub blocker_task_id: String,
+    pub dependent_task_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskListResult {
+    pub tasks: Vec<TaskDto>,
+    pub dependencies: Vec<DependencyEdgeDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
