@@ -2,7 +2,7 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("./task-service", () => ({
-  taskList: vi.fn().mockResolvedValue([]),
+  taskList: vi.fn().mockResolvedValue({ tasks: [], dependencies: [] }),
 }));
 
 import { TaskRefSearchModal } from "./TaskRefSearchModal";
@@ -21,6 +21,9 @@ function makeTask(id: string, title: string, subtasks: Task["subtasks"] = []): T
     tags: [],
     dueDate: null,
     subtasks,
+    isCyclic: false,
+    isBlocked: false,
+    unsatisfiedBlockerNames: [],
     createdAt: "2025-01-01T00:00:00Z",
     updatedAt: "2025-01-01T00:00:00Z",
   };
@@ -32,11 +35,11 @@ beforeEach(() => {
 
 describe("TaskRefSearchModal", () => {
   it("filters tasks by case-insensitive title", async () => {
-    mockedTaskList.mockResolvedValue([
+    mockedTaskList.mockResolvedValue({ tasks: [
       makeTask("t2", "Buy groceries"),
       makeTask("t3", "Fix BUG"),
       makeTask("t4", "Read book"),
-    ]);
+    ], dependencies: [] });
     render(
       <TaskRefSearchModal taskId="t1" onSelect={vi.fn()} onClose={vi.fn()} />,
     );
@@ -52,10 +55,10 @@ describe("TaskRefSearchModal", () => {
   });
 
   it("excludes self from candidate list", async () => {
-    mockedTaskList.mockResolvedValue([
+    mockedTaskList.mockResolvedValue({ tasks: [
       makeTask("t1", "Self task"),
       makeTask("t2", "Other task"),
-    ]);
+    ], dependencies: [] });
     render(
       <TaskRefSearchModal taskId="t1" onSelect={vi.fn()} onClose={vi.fn()} />,
     );
@@ -78,7 +81,7 @@ describe("TaskRefSearchModal", () => {
       },
     ]);
     const safeTask = makeTask("t3", "Safe task");
-    mockedTaskList.mockResolvedValue([circularTask, safeTask]);
+    mockedTaskList.mockResolvedValue({ tasks: [circularTask, safeTask], dependencies: [] });
     render(
       <TaskRefSearchModal taskId="t1" onSelect={vi.fn()} onClose={vi.fn()} />,
     );
@@ -89,7 +92,7 @@ describe("TaskRefSearchModal", () => {
   });
 
   it("selecting a task fires onSelect and onClose", async () => {
-    mockedTaskList.mockResolvedValue([makeTask("t2", "Target")]);
+    mockedTaskList.mockResolvedValue({ tasks: [makeTask("t2", "Target")], dependencies: [] });
     const onSelect = vi.fn();
     const onClose = vi.fn();
     render(
@@ -103,7 +106,7 @@ describe("TaskRefSearchModal", () => {
   });
 
   it("shows 'No matching tasks' empty state", async () => {
-    mockedTaskList.mockResolvedValue([makeTask("t1", "Self only")]);
+    mockedTaskList.mockResolvedValue({ tasks: [makeTask("t1", "Self only")], dependencies: [] });
     render(
       <TaskRefSearchModal taskId="t1" onSelect={vi.fn()} onClose={vi.fn()} />,
     );
@@ -113,7 +116,7 @@ describe("TaskRefSearchModal", () => {
   });
 
   it("Escape key closes the modal", async () => {
-    mockedTaskList.mockResolvedValue([makeTask("t2", "Other")]);
+    mockedTaskList.mockResolvedValue({ tasks: [makeTask("t2", "Other")], dependencies: [] });
     const onClose = vi.fn();
     render(
       <TaskRefSearchModal taskId="t1" onSelect={vi.fn()} onClose={onClose} />,

@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock the task-service module so we never call into Tauri invoke
 vi.mock("./features/tasks/task-service", () => ({
-  taskList: vi.fn().mockResolvedValue([]),
+  taskList: vi.fn().mockResolvedValue({ tasks: [], dependencies: [] }),
   taskGet: vi.fn().mockResolvedValue(null),
   taskCreate: vi.fn().mockResolvedValue({}),
   taskUpdate: vi.fn().mockResolvedValue({}),
@@ -26,19 +26,22 @@ const sampleTask = {
   tags: [],
   dueDate: null,
   subtasks: [],
+  isCyclic: false,
+  isBlocked: false,
+  unsatisfiedBlockerNames: [],
   createdAt: "2025-01-01T00:00:00Z",
   updatedAt: "2025-01-01T00:00:00Z",
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockedTaskList.mockResolvedValue([]);
+  mockedTaskList.mockResolvedValue({ tasks: [], dependencies: [] });
   mockedTaskGet.mockResolvedValue(null);
 });
 
 describe("App", () => {
   it("renders GridView when no task is selected", async () => {
-    mockedTaskList.mockResolvedValue([
+    mockedTaskList.mockResolvedValue({ tasks: [
       {
         id: "t1",
         title: "First task",
@@ -48,10 +51,13 @@ describe("App", () => {
         tags: [],
         dueDate: null,
         subtasks: [],
+        isCyclic: false,
+        isBlocked: false,
+        unsatisfiedBlockerNames: [],
         createdAt: "2025-01-01T00:00:00Z",
         updatedAt: "2025-01-01T00:00:00Z",
       },
-    ]);
+    ], dependencies: [] });
 
     render(<App />);
 
@@ -61,7 +67,7 @@ describe("App", () => {
 
   it("shows detail view when a card is clicked", async () => {
     const user = userEvent.setup();
-    mockedTaskList.mockResolvedValue([sampleTask]);
+    mockedTaskList.mockResolvedValue({ tasks: [sampleTask], dependencies: [] });
     mockedTaskGet.mockResolvedValue(sampleTask);
 
     render(<App />);
@@ -76,7 +82,7 @@ describe("App", () => {
 
   it("navigates back from detail to grid", async () => {
     const user = userEvent.setup();
-    mockedTaskList.mockResolvedValue([sampleTask]);
+    mockedTaskList.mockResolvedValue({ tasks: [sampleTask], dependencies: [] });
     mockedTaskGet.mockResolvedValue(sampleTask);
 
     render(<App />);

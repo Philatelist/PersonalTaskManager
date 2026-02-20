@@ -24,9 +24,23 @@ interface TaskResponse {
   status: string;
   tags: string[];
   subtasks: SubtaskResponse[];
+  isCyclic: boolean;
+  isBlocked: boolean;
+  unsatisfiedBlockerNames: string[];
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+interface TaskListResponse {
+  tasks: TaskResponse[];
+  dependencies: DependencyEdgeResponse[];
+}
+
+export interface DependencyEdgeResponse {
+  id: string;
+  blockerTaskId: string;
+  dependentTaskId: string;
 }
 
 function toSubtask(response: SubtaskResponse): Subtask {
@@ -43,6 +57,9 @@ function toTask(response: TaskResponse): Task {
     ...response,
     status: response.status as Task["status"],
     subtasks: (response.subtasks ?? []).map(toSubtask),
+    isCyclic: response.isCyclic ?? false,
+    isBlocked: response.isBlocked ?? false,
+    unsatisfiedBlockerNames: response.unsatisfiedBlockerNames ?? [],
   };
 }
 
@@ -68,15 +85,23 @@ export async function taskGet(id: string): Promise<Task> {
   return toTask(response);
 }
 
+export interface TaskListResult {
+  tasks: Task[];
+  dependencies: DependencyEdgeResponse[];
+}
+
 export async function taskList(options?: {
   statusFilter?: string;
   tagFilter?: string;
-}): Promise<Task[]> {
-  const responses = await invoke<TaskResponse[]>("task_list", {
+}): Promise<TaskListResult> {
+  const response = await invoke<TaskListResponse>("task_list", {
     statusFilter: options?.statusFilter ?? null,
     tagFilter: options?.tagFilter ?? null,
   });
-  return responses.map(toTask);
+  return {
+    tasks: response.tasks.map(toTask),
+    dependencies: response.dependencies,
+  };
 }
 
 export async function taskUpdate(
