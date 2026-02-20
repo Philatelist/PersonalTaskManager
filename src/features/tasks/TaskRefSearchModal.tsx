@@ -23,10 +23,10 @@ export function TaskRefSearchModal({
 
   useEffect(() => {
     let cancelled = false;
-    taskList({ statusFilter: "active" }).then((tasks) => {
+    taskList({ statusFilter: "active" }).then((result) => {
       if (cancelled) return;
       // Filter out self and circular refs
-      const filtered = tasks.filter((t) => {
+      const filtered = result.tasks.filter((t) => {
         if (t.id === taskId) return false;
         // Check if candidate has a taskref subtask pointing back to us
         const hasCircularRef = t.subtasks.some(

@@ -23,6 +23,9 @@ export interface Task {
   tags: string[];
   dueDate: string | null;
   subtasks: Subtask[];
+  isCyclic: boolean;
+  isBlocked: boolean;
+  unsatisfiedBlockerNames: string[];
   createdAt: string;
   updatedAt: string;
 }

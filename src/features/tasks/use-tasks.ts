@@ -17,7 +17,7 @@ export function useTasks() {
       setLoading(true);
       const result = await taskList({ statusFilter: "active" });
       setTasks(
-        result.map((t) => ({
+        result.tasks.map((t) => ({
           ...t,
           progress: computeProgress(t.subtasks),
         })),
