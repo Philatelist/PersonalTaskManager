@@ -18,7 +18,7 @@
 
 - [x] **Sub-task 3:** Add `create_dependency_impl` and `delete_dependency_impl` to `src-tauri/src/commands.rs`. `create_dependency_impl(conn, blocker_task_id, dependent_task_id)`: validate both tasks exist and are not deleted, check self-dependency, insert row, return `DependencyEdgeDto` + `is_cyclic: false` (SCC not yet implemented). `delete_dependency_impl(conn, dependency_id)`: delete row by id. Add Tauri command wrappers `dependency_create` and `dependency_delete` (with `backup_state.maybe_backup()`). Register both in `lib.rs` invoke_handler. Write Rust tests: happy path create, self-dep rejected, duplicate rejected, both-tasks-must-exist, deleted-task rejected, happy path delete, delete nonexistent. Run `cargo test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 4: Verify** — Run full test suite (`cargo test` + `pnpm test`). Confirm all existing tests still pass plus the new dependency tests. The app should compile and run with no visible UI changes. **[Agent: general-purpose]**
+- [x] **Sub-task 4: Verify** — Run full test suite (`cargo test` + `pnpm test`). Confirm all existing tests still pass plus the new dependency tests. The app should compile and run with no visible UI changes. **[Agent: general-purpose]**
 
 ---
 
