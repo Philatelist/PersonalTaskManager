@@ -73,7 +73,9 @@ pub fn run() {
             commands::subtask_create,
             commands::subtask_update,
             commands::subtask_delete,
-            commands::subtask_reorder
+            commands::subtask_reorder,
+            commands::dependency_create,
+            commands::dependency_delete
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
