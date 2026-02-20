@@ -28,7 +28,7 @@
 
 **Acceptance Criteria:** Spec §2.6 — cycle detection over dependency-only graph; computed flags for §2.3 badge logic.
 
-- [ ] **Sub-task 1:** Implement `compute_sccs(conn: &Connection) -> Result<Vec<Vec<String>>, String>` in `commands.rs`. Load all edges from `task_dependencies` only (not subtask refs). Build adjacency list. Run Tarjan's algorithm. Return only SCCs of size > 1. Add helper functions `task_is_cyclic(sccs, task_id) -> bool` and `is_in_same_scc(sccs, task_a, task_b) -> bool`. Write Rust tests: no edges → empty, single edge (no cycle), A→B→A cycle, A→B→C→A cycle, two separate SCCs, mixed cyclic and non-cyclic nodes. Run `cargo test`. **[Agent: general-purpose]**
+- [x] **Sub-task 1:** Implement `compute_sccs(conn: &Connection) -> Result<Vec<Vec<String>>, String>` in `commands.rs`. Load all edges from `task_dependencies` only (not subtask refs). Build adjacency list. Run Tarjan's algorithm. Return only SCCs of size > 1. Add helper functions `task_is_cyclic(sccs, task_id) -> bool` and `is_in_same_scc(sccs, task_a, task_b) -> bool`. Write Rust tests: no edges → empty, single edge (no cycle), A→B→A cycle, A→B→C→A cycle, two separate SCCs, mixed cyclic and non-cyclic nodes. Run `cargo test`. **[Agent: general-purpose]**
 
 - [ ] **Sub-task 2:** Update `create_dependency_impl` to call `compute_sccs` after inserting the edge and set `is_cyclic` on the result to `true` if both `blocker_task_id` and `dependent_task_id` are in the same SCC. Write Rust tests: creating a non-cyclic dep returns `is_cyclic: false`, creating A→B then B→A returns `is_cyclic: true`. Run `cargo test`. **[Agent: general-purpose]**
 

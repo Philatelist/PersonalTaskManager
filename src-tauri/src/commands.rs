@@ -1055,6 +1055,133 @@ pub fn dependency_delete(
 }
 
 // ===========================================================================
+// SCC (Tarjan's Algorithm)
+// ===========================================================================
+
+/// Compute all strongly connected components of size > 1 from the
+/// dependency graph (task_dependencies table only — not subtask refs).
+pub fn compute_sccs(conn: &Connection) -> Result<Vec<Vec<String>>, String> {
+    // Load all edges.
+    let mut stmt = conn
+        .prepare("SELECT blocker_task_id, dependent_task_id FROM task_dependencies")
+        .map_err(|e| e.to_string())?;
+
+    let edges: Vec<(String, String)> = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    if edges.is_empty() {
+        return Ok(vec![]);
+    }
+
+    // Build adjacency list and collect all node ids.
+    let mut adj: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut nodes: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    for (from, to) in &edges {
+        adj.entry(from.clone()).or_default().push(to.clone());
+        nodes.insert(from.clone());
+        nodes.insert(to.clone());
+    }
+
+    // Tarjan's algorithm state.
+    let mut index_counter: usize = 0;
+    let mut stack: Vec<String> = Vec::new();
+    let mut on_stack: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut indices: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut lowlinks: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut result: Vec<Vec<String>> = Vec::new();
+
+    fn strongconnect(
+        v: &str,
+        adj: &std::collections::HashMap<String, Vec<String>>,
+        index_counter: &mut usize,
+        stack: &mut Vec<String>,
+        on_stack: &mut std::collections::HashSet<String>,
+        indices: &mut std::collections::HashMap<String, usize>,
+        lowlinks: &mut std::collections::HashMap<String, usize>,
+        result: &mut Vec<Vec<String>>,
+    ) {
+        indices.insert(v.to_string(), *index_counter);
+        lowlinks.insert(v.to_string(), *index_counter);
+        *index_counter += 1;
+        stack.push(v.to_string());
+        on_stack.insert(v.to_string());
+
+        if let Some(neighbors) = adj.get(v) {
+            for w in neighbors {
+                if !indices.contains_key(w.as_str()) {
+                    strongconnect(w, adj, index_counter, stack, on_stack, indices, lowlinks, result);
+                    let low_w = lowlinks[w.as_str()];
+                    let low_v = lowlinks[v];
+                    if low_w < low_v {
+                        lowlinks.insert(v.to_string(), low_w);
+                    }
+                } else if on_stack.contains(w.as_str()) {
+                    let idx_w = indices[w.as_str()];
+                    let low_v = lowlinks[v];
+                    if idx_w < low_v {
+                        lowlinks.insert(v.to_string(), idx_w);
+                    }
+                }
+            }
+        }
+
+        // If v is a root node, pop the stack to get the SCC.
+        if lowlinks[v] == indices[v] {
+            let mut scc = Vec::new();
+            loop {
+                let w = stack.pop().unwrap();
+                on_stack.remove(&w);
+                scc.push(w.clone());
+                if w == v {
+                    break;
+                }
+            }
+            // Only keep SCCs of size > 1 (actual cycles).
+            if scc.len() > 1 {
+                result.push(scc);
+            }
+        }
+    }
+
+    // Sort nodes for deterministic traversal order.
+    let mut sorted_nodes: Vec<String> = nodes.into_iter().collect();
+    sorted_nodes.sort();
+
+    for node in &sorted_nodes {
+        if !indices.contains_key(node.as_str()) {
+            strongconnect(
+                node,
+                &adj,
+                &mut index_counter,
+                &mut stack,
+                &mut on_stack,
+                &mut indices,
+                &mut lowlinks,
+                &mut result,
+            );
+        }
+    }
+
+    Ok(result)
+}
+
+/// Returns true if the given task_id appears in any SCC (i.e., is part of a cycle).
+pub fn task_is_cyclic(sccs: &[Vec<String>], task_id: &str) -> bool {
+    sccs.iter().any(|scc| scc.iter().any(|id| id == task_id))
+}
+
+/// Returns true if both task_a and task_b are in the same SCC.
+pub fn is_in_same_scc(sccs: &[Vec<String>], task_a: &str, task_b: &str) -> bool {
+    sccs.iter().any(|scc| {
+        scc.iter().any(|id| id == task_a) && scc.iter().any(|id| id == task_b)
+    })
+}
+
+// ===========================================================================
 // Tests
 // ===========================================================================
 
@@ -3200,5 +3327,102 @@ mod tests {
         let result = delete_dependency_impl(&conn, "nonexistent".to_string());
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Dependency not found"));
+    }
+
+    // ========= SCC (Tarjan) tests =========
+
+    #[test]
+    fn test_scc_no_edges() {
+        let conn = test_db();
+        // Create tasks but no dependencies.
+        create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let sccs = compute_sccs(&conn).unwrap();
+        assert!(sccs.is_empty());
+    }
+
+    #[test]
+    fn test_scc_single_edge_no_cycle() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+
+        let sccs = compute_sccs(&conn).unwrap();
+        assert!(sccs.is_empty(), "A→B with no back-edge should not form an SCC");
+        assert!(!task_is_cyclic(&sccs, &a.id));
+        assert!(!task_is_cyclic(&sccs, &b.id));
+    }
+
+    #[test]
+    fn test_scc_two_node_cycle() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        create_dependency_impl(&conn, b.id.clone(), a.id.clone()).unwrap();
+
+        let sccs = compute_sccs(&conn).unwrap();
+        assert_eq!(sccs.len(), 1);
+        assert!(task_is_cyclic(&sccs, &a.id));
+        assert!(task_is_cyclic(&sccs, &b.id));
+        assert!(is_in_same_scc(&sccs, &a.id, &b.id));
+    }
+
+    #[test]
+    fn test_scc_three_node_cycle() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+        let c = create_task_impl(&conn, "C".to_string(), None, None, None).unwrap();
+        // A→B→C→A
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        create_dependency_impl(&conn, b.id.clone(), c.id.clone()).unwrap();
+        create_dependency_impl(&conn, c.id.clone(), a.id.clone()).unwrap();
+
+        let sccs = compute_sccs(&conn).unwrap();
+        assert_eq!(sccs.len(), 1);
+        assert_eq!(sccs[0].len(), 3);
+        assert!(task_is_cyclic(&sccs, &a.id));
+        assert!(task_is_cyclic(&sccs, &b.id));
+        assert!(task_is_cyclic(&sccs, &c.id));
+    }
+
+    #[test]
+    fn test_scc_two_separate_cycles() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+        let c = create_task_impl(&conn, "C".to_string(), None, None, None).unwrap();
+        let d = create_task_impl(&conn, "D".to_string(), None, None, None).unwrap();
+        // Cycle 1: A↔B
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        create_dependency_impl(&conn, b.id.clone(), a.id.clone()).unwrap();
+        // Cycle 2: C↔D
+        create_dependency_impl(&conn, c.id.clone(), d.id.clone()).unwrap();
+        create_dependency_impl(&conn, d.id.clone(), c.id.clone()).unwrap();
+
+        let sccs = compute_sccs(&conn).unwrap();
+        assert_eq!(sccs.len(), 2);
+        assert!(is_in_same_scc(&sccs, &a.id, &b.id));
+        assert!(is_in_same_scc(&sccs, &c.id, &d.id));
+        assert!(!is_in_same_scc(&sccs, &a.id, &c.id));
+    }
+
+    #[test]
+    fn test_scc_mixed_cyclic_and_non_cyclic() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+        let c = create_task_impl(&conn, "C".to_string(), None, None, None).unwrap();
+        // A↔B cycle, C→A (C is not in a cycle)
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        create_dependency_impl(&conn, b.id.clone(), a.id.clone()).unwrap();
+        create_dependency_impl(&conn, c.id.clone(), a.id.clone()).unwrap();
+
+        let sccs = compute_sccs(&conn).unwrap();
+        assert_eq!(sccs.len(), 1); // Only the A↔B cycle
+        assert!(task_is_cyclic(&sccs, &a.id));
+        assert!(task_is_cyclic(&sccs, &b.id));
+        assert!(!task_is_cyclic(&sccs, &c.id));
     }
 }
