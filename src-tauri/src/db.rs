@@ -52,6 +52,21 @@ const MIGRATIONS: &[Migration] = &[
             CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_id);
         ",
     },
+    Migration {
+        name: "004_create_task_dependencies_table",
+        sql: "
+            CREATE TABLE IF NOT EXISTS task_dependencies (
+                id                TEXT PRIMARY KEY NOT NULL,
+                blocker_task_id   TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                dependent_task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                created_at        TEXT NOT NULL,
+                CHECK(blocker_task_id != dependent_task_id),
+                UNIQUE(blocker_task_id, dependent_task_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_task_deps_blocker ON task_dependencies(blocker_task_id);
+            CREATE INDEX IF NOT EXISTS idx_task_deps_dependent ON task_dependencies(dependent_task_id);
+        ",
+    },
 ];
 
 /// Runs all pending migrations against the database.
@@ -570,6 +585,238 @@ mod tests {
         assert_eq!(
             count_after, 0,
             "subtask should be cascade-deleted when parent task is deleted"
+        );
+    }
+
+    #[test]
+    fn test_task_dependencies_table_exists_after_initialization() {
+        let dir = tempdir().expect("failed to create temp dir");
+        let conn = initialize(dir.path()).expect("failed to initialize db");
+
+        let table_exists: bool = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'task_dependencies'",
+                [],
+                |row| {
+                    let count: i64 = row.get(0)?;
+                    Ok(count > 0)
+                },
+            )
+            .expect("failed to query sqlite_master for task_dependencies table");
+
+        assert!(
+            table_exists,
+            "task_dependencies table should exist after initialization"
+        );
+
+        // Verify indexes on both FK columns were created.
+        let blocker_index: bool = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_task_deps_blocker'",
+                [],
+                |row| {
+                    let count: i64 = row.get(0)?;
+                    Ok(count > 0)
+                },
+            )
+            .expect("failed to query for blocker index");
+        assert!(blocker_index, "idx_task_deps_blocker index should exist");
+
+        let dependent_index: bool = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_task_deps_dependent'",
+                [],
+                |row| {
+                    let count: i64 = row.get(0)?;
+                    Ok(count > 0)
+                },
+            )
+            .expect("failed to query for dependent index");
+        assert!(dependent_index, "idx_task_deps_dependent index should exist");
+    }
+
+    #[test]
+    fn test_task_dependencies_self_loop_rejected() {
+        let dir = tempdir().expect("failed to create temp dir");
+        let conn = initialize(dir.path()).expect("failed to initialize db");
+
+        conn.execute(
+            "INSERT INTO tasks (id, title, priority_rank, status, created_at, updated_at)
+             VALUES ('task-self', 'Self Task', 'a0', 'active', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert task");
+
+        let result = conn.execute(
+            "INSERT INTO task_dependencies (id, blocker_task_id, dependent_task_id, created_at)
+             VALUES ('dep-self', 'task-self', 'task-self', '2025-01-01T00:00:00Z')",
+            [],
+        );
+        assert!(
+            result.is_err(),
+            "self-loop dependency should be rejected by CHECK constraint"
+        );
+    }
+
+    #[test]
+    fn test_task_dependencies_duplicate_rejected() {
+        let dir = tempdir().expect("failed to create temp dir");
+        let conn = initialize(dir.path()).expect("failed to initialize db");
+
+        conn.execute(
+            "INSERT INTO tasks (id, title, priority_rank, status, created_at, updated_at)
+             VALUES ('task-d1', 'Task D1', 'a0', 'active', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert task D1");
+
+        conn.execute(
+            "INSERT INTO tasks (id, title, priority_rank, status, created_at, updated_at)
+             VALUES ('task-d2', 'Task D2', 'a0', 'active', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert task D2");
+
+        conn.execute(
+            "INSERT INTO task_dependencies (id, blocker_task_id, dependent_task_id, created_at)
+             VALUES ('dep-1', 'task-d1', 'task-d2', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert first dependency");
+
+        let duplicate = conn.execute(
+            "INSERT INTO task_dependencies (id, blocker_task_id, dependent_task_id, created_at)
+             VALUES ('dep-2', 'task-d1', 'task-d2', '2025-01-01T00:00:00Z')",
+            [],
+        );
+        assert!(
+            duplicate.is_err(),
+            "duplicate dependency (same blocker + dependent) should be rejected by UNIQUE constraint"
+        );
+    }
+
+    #[test]
+    fn test_task_dependencies_reverse_direction_allowed() {
+        let dir = tempdir().expect("failed to create temp dir");
+        let conn = initialize(dir.path()).expect("failed to initialize db");
+
+        conn.execute(
+            "INSERT INTO tasks (id, title, priority_rank, status, created_at, updated_at)
+             VALUES ('task-r1', 'Task R1', 'a0', 'active', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert task R1");
+
+        conn.execute(
+            "INSERT INTO tasks (id, title, priority_rank, status, created_at, updated_at)
+             VALUES ('task-r2', 'Task R2', 'a0', 'active', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert task R2");
+
+        // A blocks B
+        conn.execute(
+            "INSERT INTO task_dependencies (id, blocker_task_id, dependent_task_id, created_at)
+             VALUES ('dep-fwd', 'task-r1', 'task-r2', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert forward dependency");
+
+        // B blocks A (reverse direction — creates a cycle, but should be allowed at the DB level)
+        let reverse = conn.execute(
+            "INSERT INTO task_dependencies (id, blocker_task_id, dependent_task_id, created_at)
+             VALUES ('dep-rev', 'task-r2', 'task-r1', '2025-01-01T00:00:00Z')",
+            [],
+        );
+        assert!(
+            reverse.is_ok(),
+            "reverse direction dependency should be allowed (cycles are valid at DB level)"
+        );
+    }
+
+    #[test]
+    fn test_task_dependencies_cascade_delete_blocker() {
+        let dir = tempdir().expect("failed to create temp dir");
+        let conn = initialize(dir.path()).expect("failed to initialize db");
+
+        conn.execute(
+            "INSERT INTO tasks (id, title, priority_rank, status, created_at, updated_at)
+             VALUES ('task-cb1', 'Blocker', 'a0', 'active', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert blocker task");
+
+        conn.execute(
+            "INSERT INTO tasks (id, title, priority_rank, status, created_at, updated_at)
+             VALUES ('task-cb2', 'Dependent', 'a0', 'active', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert dependent task");
+
+        conn.execute(
+            "INSERT INTO task_dependencies (id, blocker_task_id, dependent_task_id, created_at)
+             VALUES ('dep-cb', 'task-cb1', 'task-cb2', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert dependency");
+
+        // Delete the blocker task — dependency row should be cascade-deleted.
+        conn.execute("DELETE FROM tasks WHERE id = 'task-cb1'", [])
+            .expect("failed to delete blocker task");
+
+        let dep_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM task_dependencies WHERE id = 'dep-cb'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("failed to count dependencies");
+        assert_eq!(
+            dep_count, 0,
+            "dependency should be cascade-deleted when blocker task is deleted"
+        );
+    }
+
+    #[test]
+    fn test_task_dependencies_cascade_delete_dependent() {
+        let dir = tempdir().expect("failed to create temp dir");
+        let conn = initialize(dir.path()).expect("failed to initialize db");
+
+        conn.execute(
+            "INSERT INTO tasks (id, title, priority_rank, status, created_at, updated_at)
+             VALUES ('task-cd1', 'Blocker', 'a0', 'active', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert blocker task");
+
+        conn.execute(
+            "INSERT INTO tasks (id, title, priority_rank, status, created_at, updated_at)
+             VALUES ('task-cd2', 'Dependent', 'a0', 'active', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert dependent task");
+
+        conn.execute(
+            "INSERT INTO task_dependencies (id, blocker_task_id, dependent_task_id, created_at)
+             VALUES ('dep-cd', 'task-cd1', 'task-cd2', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .expect("failed to insert dependency");
+
+        // Delete the dependent task — dependency row should be cascade-deleted.
+        conn.execute("DELETE FROM tasks WHERE id = 'task-cd2'", [])
+            .expect("failed to delete dependent task");
+
+        let dep_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM task_dependencies WHERE id = 'dep-cd'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("failed to count dependencies");
+        assert_eq!(
+            dep_count, 0,
+            "dependency should be cascade-deleted when dependent task is deleted"
         );
     }
 
