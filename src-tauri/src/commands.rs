@@ -1,4 +1,4 @@
-use crate::models::{TaskDto, SubtaskDto, DependencyEdgeDto, CreateDependencyResult};
+use crate::models::{TaskDto, SubtaskDto, DependencyEdgeDto, CreateDependencyResult, TaskListResult};
 use rusqlite::Connection;
 
 /// Core implementation of task creation, separated from the Tauri command for testability.
@@ -867,12 +867,13 @@ pub fn task_get(id: String, state: tauri::State<'_, crate::DbState>) -> Result<T
 ///
 /// Queries the `tasks` table ordered by `priority_rank` ascending.
 /// Optionally filters by status (defaults to "active") and/or tag.
-/// Returns a vector of `TaskDto` with tags populated.
+/// Returns a `TaskListResult` with tasks (including computed dependency flags)
+/// and a flat list of all dependency edges.
 pub fn list_tasks_impl(
     conn: &Connection,
     status_filter: Option<String>,
     tag_filter: Option<String>,
-) -> Result<Vec<TaskDto>, String> {
+) -> Result<TaskListResult, String> {
     let status = status_filter.unwrap_or_else(|| "active".to_string());
 
     let (sql, params): (String, Vec<Box<dyn rusqlite::types::ToSql>>) = if let Some(ref tag) = tag_filter {
@@ -923,7 +924,101 @@ pub fn list_tasks_impl(
         task.tags = get_tags_for_task(conn, &task.id)?;
     }
 
-    Ok(tasks)
+    // Bulk-fetch all dependency edges.
+    let edges = fetch_all_dependency_edges(conn)?;
+
+    // Compute SCCs once.
+    let sccs = compute_sccs(conn)?;
+
+    // Compute dependency flags for each task.
+    compute_dependency_flags(&mut tasks, &edges, &sccs, conn)?;
+
+    Ok(TaskListResult {
+        tasks,
+        dependencies: edges,
+    })
+}
+
+/// Fetches all dependency edges from the database in a single query.
+fn fetch_all_dependency_edges(conn: &Connection) -> Result<Vec<DependencyEdgeDto>, String> {
+    let mut stmt = conn
+        .prepare("SELECT id, blocker_task_id, dependent_task_id FROM task_dependencies")
+        .map_err(|e| e.to_string())?;
+
+    let edges = stmt
+        .query_map([], |row| {
+            Ok(DependencyEdgeDto {
+                id: row.get(0)?,
+                blocker_task_id: row.get(1)?,
+                dependent_task_id: row.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(edges)
+}
+
+/// Computes `is_cyclic`, `is_blocked`, and `unsatisfied_blocker_names` for each task
+/// based on the edge list and SCC results.
+///
+/// A task is `is_blocked` if it has at least one direct blocker that is:
+///   - not in the same SCC as the task (i.e., not a purely cyclic blocker), AND
+///   - not satisfied (blocker status != "done").
+///
+/// `unsatisfied_blocker_names` lists the titles of those blockers.
+fn compute_dependency_flags(
+    tasks: &mut [TaskDto],
+    edges: &[DependencyEdgeDto],
+    sccs: &[Vec<String>],
+    conn: &Connection,
+) -> Result<(), String> {
+    // Build a map: dependent_task_id → list of blocker_task_ids
+    let mut blockers_map: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for edge in edges {
+        blockers_map
+            .entry(edge.dependent_task_id.clone())
+            .or_default()
+            .push(edge.blocker_task_id.clone());
+    }
+
+    for task in tasks.iter_mut() {
+        // is_cyclic: task is in any SCC
+        task.is_cyclic = task_is_cyclic(sccs, &task.id);
+
+        // Compute blocking from direct blockers
+        if let Some(blocker_ids) = blockers_map.get(&task.id) {
+            let mut unsatisfied_names: Vec<String> = Vec::new();
+
+            for blocker_id in blocker_ids {
+                // Skip cyclic blockers (same SCC as the dependent)
+                if is_in_same_scc(sccs, &task.id, blocker_id) {
+                    continue;
+                }
+
+                // Look up blocker status and title
+                let blocker_info: Result<(String, String), _> = conn.query_row(
+                    "SELECT status, title FROM tasks WHERE id = ?1",
+                    [blocker_id],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                );
+
+                if let Ok((blocker_status, blocker_title)) = blocker_info {
+                    if blocker_status != "done" {
+                        unsatisfied_names.push(blocker_title);
+                    }
+                }
+            }
+
+            if !unsatisfied_names.is_empty() {
+                task.is_blocked = true;
+                task.unsatisfied_blocker_names = unsatisfied_names;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -931,7 +1026,7 @@ pub fn task_list(
     status_filter: Option<String>,
     tag_filter: Option<String>,
     state: tauri::State<'_, crate::DbState>,
-) -> Result<Vec<TaskDto>, String> {
+) -> Result<TaskListResult, String> {
     let conn = state.0.lock().unwrap();
     list_tasks_impl(&conn, status_filter, tag_filter)
 }
@@ -1318,7 +1413,7 @@ mod tests {
     fn test_list_tasks_empty() {
         let conn = test_db();
 
-        let tasks = list_tasks_impl(&conn, None, None).expect("list_tasks_impl should succeed on empty db");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list_tasks_impl should succeed on empty db").tasks;
         assert!(tasks.is_empty(), "should return an empty vec on an empty database");
     }
 
@@ -1345,7 +1440,7 @@ mod tests {
         )
         .unwrap();
 
-        let tasks = list_tasks_impl(&conn, None, None).expect("list_tasks_impl should succeed");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list_tasks_impl should succeed").tasks;
         assert_eq!(tasks.len(), 1, "only active tasks should be returned");
         assert_eq!(tasks[0].id, task1.id, "the returned task should be the active one");
     }
@@ -1361,7 +1456,7 @@ mod tests {
         let task3 = create_task_impl(&conn, "Third".to_string(), None, None, None)
             .expect("create task3 should succeed");
 
-        let tasks = list_tasks_impl(&conn, None, None).expect("list_tasks_impl should succeed");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list_tasks_impl should succeed").tasks;
         assert_eq!(tasks.len(), 3);
         assert_eq!(tasks[0].id, task1.id, "first created task should be first (lowest priority_rank)");
         assert_eq!(tasks[1].id, task2.id, "second created task should be second");
@@ -1387,7 +1482,7 @@ mod tests {
                 .expect("create_task_impl should succeed");
         }
 
-        let tasks = list_tasks_impl(&conn, None, None).expect("list_tasks_impl should succeed");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list_tasks_impl should succeed").tasks;
         assert_eq!(tasks.len(), 5, "should return exactly 5 tasks");
     }
 
@@ -1798,7 +1893,7 @@ mod tests {
         assert_eq!(fetched.status, "deleted", "status should be 'deleted'");
 
         // Verify deleted task is excluded from list (which filters to active only).
-        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed").tasks;
         assert!(
             tasks.iter().all(|t| t.id != task.id),
             "deleted task should not appear in active task list"
@@ -1884,7 +1979,7 @@ mod tests {
         .expect("create task2 should succeed");
 
         let tasks = list_tasks_impl(&conn, None, None)
-            .expect("list_tasks_impl should succeed");
+            .expect("list_tasks_impl should succeed").tasks;
 
         assert_eq!(tasks.len(), 2);
 
@@ -1911,7 +2006,7 @@ mod tests {
         .unwrap();
 
         let tasks = list_tasks_impl(&conn, Some("done".to_string()), None)
-            .expect("list_tasks_impl should succeed");
+            .expect("list_tasks_impl should succeed").tasks;
 
         assert_eq!(tasks.len(), 1, "only done tasks should be returned");
         assert_eq!(tasks[0].id, task2.id);
@@ -1948,7 +2043,7 @@ mod tests {
         .expect("create task3 should succeed");
 
         let tasks = list_tasks_impl(&conn, None, Some("work".to_string()))
-            .expect("list_tasks_impl should succeed");
+            .expect("list_tasks_impl should succeed").tasks;
 
         assert_eq!(tasks.len(), 2, "only tasks with tag 'work' should be returned");
 
@@ -1986,7 +2081,7 @@ mod tests {
         .unwrap();
 
         let tasks = list_tasks_impl(&conn, Some("done".to_string()), Some("work".to_string()))
-            .expect("list_tasks_impl should succeed");
+            .expect("list_tasks_impl should succeed").tasks;
 
         assert_eq!(tasks.len(), 1, "only done tasks with tag 'work' should be returned");
         assert_eq!(tasks[0].id, task2.id);
@@ -2010,7 +2105,7 @@ mod tests {
         // Reorder C to top (after_id = None).
         reorder_task_impl(&conn, c.id.clone(), None).expect("reorder should succeed");
 
-        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed").tasks;
         assert_eq!(tasks.len(), 3);
         assert_eq!(tasks[0].id, c.id, "C should be first");
         assert_eq!(tasks[1].id, a.id, "A should be second");
@@ -2031,7 +2126,7 @@ mod tests {
         reorder_task_impl(&conn, c.id.clone(), Some(a.id.clone()))
             .expect("reorder should succeed");
 
-        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed").tasks;
         assert_eq!(tasks.len(), 3);
         assert_eq!(tasks[0].id, a.id, "A should be first");
         assert_eq!(tasks[1].id, c.id, "C should be second");
@@ -2052,7 +2147,7 @@ mod tests {
         reorder_task_impl(&conn, a.id.clone(), Some(c.id.clone()))
             .expect("reorder should succeed");
 
-        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed").tasks;
         assert_eq!(tasks.len(), 3);
         assert_eq!(tasks[0].id, b.id, "B should be first");
         assert_eq!(tasks[1].id, c.id, "C should be second");
@@ -2100,7 +2195,7 @@ mod tests {
         reorder_task_impl(&conn, task.id.clone(), None)
             .expect("reorder single task to top should succeed");
 
-        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed").tasks;
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].id, task.id);
     }
@@ -2139,7 +2234,7 @@ mod tests {
         .unwrap();
 
         // Verify keys are long.
-        let tasks_before = list_tasks_impl(&conn, None, None).expect("list should succeed");
+        let tasks_before = list_tasks_impl(&conn, None, None).expect("list should succeed").tasks;
         assert!(
             tasks_before.iter().any(|t| t.priority_rank.len() > 20),
             "at least one key should exceed 20 chars before reorder"
@@ -2149,7 +2244,7 @@ mod tests {
         reorder_task_impl(&conn, b.id.clone(), None).expect("reorder should succeed");
 
         // After the reorder, verify all tasks have short priority_rank values.
-        let tasks_after = list_tasks_impl(&conn, None, None).expect("list should succeed");
+        let tasks_after = list_tasks_impl(&conn, None, None).expect("list should succeed").tasks;
         assert_eq!(tasks_after.len(), 3);
         for task in &tasks_after {
             assert!(
@@ -2188,7 +2283,7 @@ mod tests {
             .expect("reorder should succeed");
 
         // Verify the non-moved tasks still have reasonable-length keys.
-        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed").tasks;
         for task in &tasks {
             assert!(
                 task.priority_rank.len() <= 20,
@@ -2255,7 +2350,7 @@ mod tests {
             .expect("reorder should succeed");
 
         // After renumbering, verify all 5 tasks have short keys.
-        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed");
+        let tasks = list_tasks_impl(&conn, None, None).expect("list should succeed").tasks;
         assert_eq!(tasks.len(), 5);
         for task in &tasks {
             assert!(
@@ -3455,5 +3550,89 @@ mod tests {
         assert!(task_is_cyclic(&sccs, &a.id));
         assert!(task_is_cyclic(&sccs, &b.id));
         assert!(!task_is_cyclic(&sccs, &c.id));
+    }
+
+    // ========= TaskListResult / dependency flags tests =========
+
+    #[test]
+    fn test_list_tasks_no_deps_flags_default() {
+        let conn = test_db();
+        create_task_impl(&conn, "Solo".to_string(), None, None, None).unwrap();
+
+        let result = list_tasks_impl(&conn, None, None).unwrap();
+        assert_eq!(result.tasks.len(), 1);
+        assert!(!result.tasks[0].is_cyclic);
+        assert!(!result.tasks[0].is_blocked);
+        assert!(result.tasks[0].unsatisfied_blocker_names.is_empty());
+        assert!(result.dependencies.is_empty());
+    }
+
+    #[test]
+    fn test_list_tasks_unsatisfied_non_cyclic_blocker() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "Blocker A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "Dependent B".to_string(), None, None, None).unwrap();
+        // A blocks B (A is active → unsatisfied)
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+
+        let result = list_tasks_impl(&conn, None, None).unwrap();
+        let task_b = result.tasks.iter().find(|t| t.id == b.id).unwrap();
+        assert!(task_b.is_blocked);
+        assert!(!task_b.is_cyclic);
+        assert_eq!(task_b.unsatisfied_blocker_names, vec!["Blocker A"]);
+    }
+
+    #[test]
+    fn test_list_tasks_only_cyclic_blockers_not_blocked() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+        // A↔B cycle
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        create_dependency_impl(&conn, b.id.clone(), a.id.clone()).unwrap();
+
+        let result = list_tasks_impl(&conn, None, None).unwrap();
+        let task_a = result.tasks.iter().find(|t| t.id == a.id).unwrap();
+        let task_b = result.tasks.iter().find(|t| t.id == b.id).unwrap();
+        // Both are cyclic but NOT blocked (cyclic blockers don't count as blocking)
+        assert!(task_a.is_cyclic);
+        assert!(!task_a.is_blocked);
+        assert!(task_b.is_cyclic);
+        assert!(!task_b.is_blocked);
+    }
+
+    #[test]
+    fn test_list_tasks_mixed_cyclic_and_non_cyclic_blockers() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+        let c = create_task_impl(&conn, "External C".to_string(), None, None, None).unwrap();
+        // A↔B cycle + C blocks B (non-cyclic)
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        create_dependency_impl(&conn, b.id.clone(), a.id.clone()).unwrap();
+        create_dependency_impl(&conn, c.id.clone(), b.id.clone()).unwrap();
+
+        let result = list_tasks_impl(&conn, None, None).unwrap();
+        let task_b = result.tasks.iter().find(|t| t.id == b.id).unwrap();
+        assert!(task_b.is_cyclic);
+        assert!(task_b.is_blocked);
+        assert_eq!(task_b.unsatisfied_blocker_names, vec!["External C"]);
+    }
+
+    #[test]
+    fn test_list_tasks_satisfied_blocker_not_blocked() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "Done Blocker".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "Dependent".to_string(), None, None, None).unwrap();
+        // A blocks B, then mark A as done
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        update_task_impl(&conn, a.id.clone(), None, None, Some("done".to_string()), None, None)
+            .unwrap();
+
+        // list only active tasks — A is done so it won't be in the list, but B should be
+        let result = list_tasks_impl(&conn, None, None).unwrap();
+        let task_b = result.tasks.iter().find(|t| t.id == b.id).unwrap();
+        assert!(!task_b.is_blocked, "satisfied blocker should not block");
+        assert!(task_b.unsatisfied_blocker_names.is_empty());
     }
 }
