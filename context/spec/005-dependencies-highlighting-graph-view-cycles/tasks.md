@@ -54,7 +54,7 @@
 
 - [x] **Sub-task 4:** Integrate `DependencySection` into `TaskDetailView.tsx`. Place it below the Subtasks section and above the StatusActions. Pass `taskId`, `task.blockers`, `task.dependents`, and `onUpdated={refresh}`. Run `pnpm test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 5: Verify** — Run full test suite (`cargo test` + `pnpm test`). Verify dependencies can be added, viewed, and removed in the task detail view. Confirm existing subtask and task features still work. **[Agent: general-purpose]**
+- [x] **Sub-task 5: Verify** — Run full test suite (`cargo test` + `pnpm test`). Verify dependencies can be added, viewed, and removed in the task detail view. Confirm existing subtask and task features still work. **[Agent: general-purpose]**
 
 ---
 
