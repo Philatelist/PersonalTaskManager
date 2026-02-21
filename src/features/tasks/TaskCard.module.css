@@ -88,3 +88,36 @@
 .dragging {
   opacity: 0.5;
 }
+
+.badges {
+  position: absolute;
+  top: 24px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.blockedBadge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #ffebee;
+  color: #c62828;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cyclicBadge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #fff3e0;
+  color: #e65100;
+  letter-spacing: 0.3px;
+}
