@@ -21,6 +21,8 @@ function makeTask(id: string, title: string, subtasks: Task["subtasks"] = []): T
     tags: [],
     dueDate: null,
     subtasks,
+    blockers: [],
+    dependents: [],
     isCyclic: false,
     isBlocked: false,
     unsatisfiedBlockerNames: [],

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Task, Subtask } from "./types";
+import type { Task, Subtask, Dependency, DependencyEdge } from "./types";
 
 // Matches the Rust SubtaskDto shape (camelCase via serde).
 interface SubtaskResponse {
@@ -15,6 +15,13 @@ interface SubtaskResponse {
   createdAt: string;
 }
 
+interface DependencyResponse {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  taskStatus: string;
+}
+
 // Matches the Rust TaskDto shape (camelCase via serde).
 interface TaskResponse {
   id: string;
@@ -24,6 +31,8 @@ interface TaskResponse {
   status: string;
   tags: string[];
   subtasks: SubtaskResponse[];
+  blockers: DependencyResponse[];
+  dependents: DependencyResponse[];
   isCyclic: boolean;
   isBlocked: boolean;
   unsatisfiedBlockerNames: string[];
@@ -52,11 +61,20 @@ function toSubtask(response: SubtaskResponse): Subtask {
   };
 }
 
+function toDependency(response: DependencyResponse): Dependency {
+  return {
+    ...response,
+    taskStatus: response.taskStatus as Dependency["taskStatus"],
+  };
+}
+
 function toTask(response: TaskResponse): Task {
   return {
     ...response,
     status: response.status as Task["status"],
     subtasks: (response.subtasks ?? []).map(toSubtask),
+    blockers: (response.blockers ?? []).map(toDependency),
+    dependents: (response.dependents ?? []).map(toDependency),
     isCyclic: response.isCyclic ?? false,
     isBlocked: response.isBlocked ?? false,
     unsatisfiedBlockerNames: response.unsatisfiedBlockerNames ?? [],
@@ -178,4 +196,32 @@ export async function subtaskReorder(
   orderedIds: string[],
 ): Promise<void> {
   await invoke<void>("subtask_reorder", { taskId, orderedIds });
+}
+
+interface CreateDependencyResponse {
+  edge: DependencyEdgeResponse;
+  isCyclic: boolean;
+}
+
+export interface CreateDependencyResult {
+  edge: DependencyEdge;
+  isCyclic: boolean;
+}
+
+export async function dependencyCreate(
+  blockerTaskId: string,
+  dependentTaskId: string,
+): Promise<CreateDependencyResult> {
+  const response = await invoke<CreateDependencyResponse>("dependency_create", {
+    blockerTaskId,
+    dependentTaskId,
+  });
+  return {
+    edge: response.edge,
+    isCyclic: response.isCyclic,
+  };
+}
+
+export async function dependencyDelete(dependencyId: string): Promise<void> {
+  await invoke<void>("dependency_delete", { dependencyId });
 }
