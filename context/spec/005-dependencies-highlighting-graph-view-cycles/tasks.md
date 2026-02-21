@@ -52,7 +52,7 @@
 
 - [x] **Sub-task 3:** Create `DependencySection.tsx` + `DependencySection.module.css`. Props: `{ taskId, blockers, dependents, onUpdated }`. Render "Dependencies" section label. Two sub-sections: "Blocked by" (blocker rows + "Add blocker" button) and "Blocks" (dependent rows + "Add dependent" button). Each row: task title, status badge, remove (×) button. Completed blockers shown with strikethrough/checkmark. Deleted-task rows shown as "Deleted task" grayed out. "Add blocker" opens DependencySearchModal, calls `dependencyCreate(selectedId, taskId)`, then `onUpdated()`. "Add dependent" opens DependencySearchModal, calls `dependencyCreate(taskId, selectedId)`, then `onUpdated()`. Remove (×) calls `dependencyDelete(id)`, then `onUpdated()`. Write tests for DependencySection: renders blocker list, renders dependent list, add-blocker flow, add-dependent flow, remove dependency, completed blocker visual, deleted task visual. Run `pnpm test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 4:** Integrate `DependencySection` into `TaskDetailView.tsx`. Place it below the Subtasks section and above the StatusActions. Pass `taskId`, `task.blockers`, `task.dependents`, and `onUpdated={refresh}`. Run `pnpm test`. **[Agent: general-purpose]**
+- [x] **Sub-task 4:** Integrate `DependencySection` into `TaskDetailView.tsx`. Place it below the Subtasks section and above the StatusActions. Pass `taskId`, `task.blockers`, `task.dependents`, and `onUpdated={refresh}`. Run `pnpm test`. **[Agent: general-purpose]**
 
 - [ ] **Sub-task 5: Verify** — Run full test suite (`cargo test` + `pnpm test`). Verify dependencies can be added, viewed, and removed in the task detail view. Confirm existing subtask and task features still work. **[Agent: general-purpose]**
 
