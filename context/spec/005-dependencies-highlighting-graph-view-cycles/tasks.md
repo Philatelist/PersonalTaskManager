@@ -36,7 +36,7 @@
 
 - [x] **Sub-task 4:** Update `get_task_impl` to populate `blockers` and `dependents` (rich `DependencyDto` arrays with JOINed titles/statuses), and compute `is_cyclic`, `is_blocked`, `unsatisfied_blocker_names`. Write Rust tests: task with blockers returns correct rich DTOs; task with dependents returns correct rich DTOs; computed flags match expected values. Run `cargo test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 5: Verify** — Run full test suite (`cargo test` + `pnpm test`). Note: frontend tests may need minor fixes if `toTask()` or `useTasks` break due to the new `TaskListResult` shape — apply minimal fixes to keep them green (default new fields). The app should compile and run. **[Agent: general-purpose]**
+- [x] **Sub-task 5: Verify** — Run full test suite (`cargo test` + `pnpm test`). Note: frontend tests may need minor fixes if `toTask()` or `useTasks` break due to the new `TaskListResult` shape — apply minimal fixes to keep them green (default new fields). The app should compile and run. **[Agent: general-purpose]**
 
 ---
 
