@@ -80,7 +80,7 @@
 
 - [x] **Sub-task 1:** Modify `TaskCard.tsx` + `TaskCard.module.css`. Add conditional "Blocked" badge element (rendered when `task.isBlocked === true`) with tooltip showing `task.unsatisfiedBlockerNames.join(", ")`. Add conditional "Cyclic" indicator (rendered when `task.isCyclic === true`), visually distinct from the blocked badge (e.g., warning triangle, different color). Both can appear simultaneously. Add CSS classes: `.blockedBadge`, `.cyclicBadge` with appropriate positioning and styling. Write frontend tests: badge renders when `isBlocked`, tooltip shows correct names, badge absent when `isBlocked: false`, cyclic indicator renders when `isCyclic`, both appear simultaneously, neither appears for tasks with no dependencies. Run `pnpm test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 2: Verify** — Run full test suite (`cargo test` + `pnpm test`). Confirm badges appear on grid cards as expected and don't interfere with existing card functionality (drag, click, progress ring). **[Agent: general-purpose]**
+- [x] **Sub-task 2: Verify** — Run full test suite (`cargo test` + `pnpm test`). Confirm badges appear on grid cards as expected and don't interfere with existing card functionality (drag, click, progress ring). **[Agent: general-purpose]**
 
 ---
 
