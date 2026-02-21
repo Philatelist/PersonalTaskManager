@@ -68,7 +68,7 @@
 
 - [x] **Sub-task 2:** Update `handleMarkDone` in `TaskDetailView.tsx`. Wrap the `taskUpdate` call in try/catch. If the error message contains `"BlockedByUnsatisfiedDependencies"`, show a Toast: "Cannot mark as done. Blocked by: [names]". Write a frontend test: mock `taskUpdate` to reject with `BlockedByUnsatisfiedDependencies`, verify toast appears with blocker names. Run `pnpm test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 3: Verify** — Run full test suite (`cargo test` + `pnpm test`). Confirm blocking enforcement works end-to-end and all other features remain unaffected. **[Agent: general-purpose]**
+- [x] **Sub-task 3: Verify** — Run full test suite (`cargo test` + `pnpm test`). Confirm blocking enforcement works end-to-end and all other features remain unaffected. **[Agent: general-purpose]**
 
 ---
 
