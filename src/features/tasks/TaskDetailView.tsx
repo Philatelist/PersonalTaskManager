@@ -7,6 +7,7 @@ import { EditableTitle } from "./EditableTitle";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { TagEditor } from "./TagEditor";
 import { DueDatePicker } from "./DueDatePicker";
+import { DependencySection } from "./DependencySection";
 import { Toast } from "./Toast";
 import styles from "./TaskDetailView.module.css";
 
@@ -321,6 +322,13 @@ export function TaskDetailView({
           onUpdated={refresh}
         />
       </div>
+
+      <DependencySection
+        taskId={taskId}
+        blockers={task.blockers}
+        dependents={task.dependents}
+        onUpdated={refresh}
+      />
 
       <StatusActions
         status={task.status}
