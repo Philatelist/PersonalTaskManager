@@ -5,12 +5,17 @@ import { ProgressRing } from "./ProgressRing";
 import { taskUpdate } from "./task-service";
 import styles from "./TaskCard.module.css";
 
+export type HighlightState = "blocker" | "dependent" | "dimmed" | null | undefined;
+
 interface TaskCardProps {
   globalIndex: number;
   task: TaskWithProgress;
   onSelect: (id: string) => void;
   onUpdated?: () => void;
   onContextMenu?: (taskId: string, position: { x: number; y: number }) => void;
+  highlightState?: HighlightState;
+  onMouseEnter?: (taskId: string) => void;
+  onMouseLeave?: () => void;
 }
 
 function formatShortDate(dateStr: string): string {
@@ -25,7 +30,7 @@ function isOverdue(dateStr: string): boolean {
   return due < today;
 }
 
-export function TaskCard({ globalIndex, task, onSelect, onUpdated, onContextMenu: onContextMenuProp }: TaskCardProps) {
+export function TaskCard({ globalIndex, task, onSelect, onUpdated, onContextMenu: onContextMenuProp, highlightState, onMouseEnter, onMouseLeave }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -46,12 +51,22 @@ export function TaskCard({ globalIndex, task, onSelect, onUpdated, onContextMenu
     onUpdated?.();
   };
 
+  const highlightClass = highlightState === "blocker"
+    ? ` ${styles.highlightBlocker}`
+    : highlightState === "dependent"
+    ? ` ${styles.highlightDependent}`
+    : highlightState === "dimmed"
+    ? ` ${styles.dimmed}`
+    : "";
+
   return (
     <article
       ref={setNodeRef}
       style={style}
-      className={`${styles.card}${isDragging ? ` ${styles.dragging}` : ""}`}
+      className={`${styles.card}${isDragging ? ` ${styles.dragging}` : ""}${highlightClass}`}
       onClick={() => onSelect(task.id)}
+      onMouseEnter={() => onMouseEnter?.(task.id)}
+      onMouseLeave={() => onMouseLeave?.()}
       onContextMenu={(e) => {
         if (onContextMenuProp) {
           e.preventDefault();

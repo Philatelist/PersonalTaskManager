@@ -16,7 +16,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import type { TaskWithProgress } from "./use-tasks";
-import { TaskCard } from "./TaskCard";
+import { TaskCard, type HighlightState } from "./TaskCard";
 import { altArrowCoordinateGetter } from "./keyboard-coordinates";
 import styles from "./TaskGrid.module.css";
 
@@ -30,6 +30,9 @@ interface TaskGridProps {
   onReorder?: (taskId: string, afterId: string | null) => void;
   onDragStart?: () => void;
   onCardContextMenu?: (taskId: string, position: { x: number; y: number }) => void;
+  highlightStates?: Record<string, HighlightState>;
+  onCardMouseEnter?: (taskId: string) => void;
+  onCardMouseLeave?: () => void;
 }
 
 export function TaskGrid({
@@ -42,6 +45,9 @@ export function TaskGrid({
   onReorder,
   onDragStart: onDragStartProp,
   onCardContextMenu,
+  highlightStates,
+  onCardMouseEnter,
+  onCardMouseLeave,
 }: TaskGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -125,6 +131,9 @@ export function TaskGrid({
               onSelect={(_id: string) => onSelectTask(task.id, startIndex + index + 1)}
               onUpdated={onUpdated}
               onContextMenu={onCardContextMenu}
+              highlightState={highlightStates?.[task.id]}
+              onMouseEnter={onCardMouseEnter}
+              onMouseLeave={onCardMouseLeave}
             />
           ))}
         </div>

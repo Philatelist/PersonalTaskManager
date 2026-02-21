@@ -229,4 +229,50 @@ describe("TaskCard", () => {
     expect(screen.queryByTestId("blocked-badge-t1")).not.toBeInTheDocument();
     expect(screen.queryByTestId("cyclic-badge-t1")).not.toBeInTheDocument();
   });
+
+  // --- Highlight state tests ---
+
+  it("applies highlightBlocker class when highlightState is 'blocker'", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask()} onSelect={vi.fn()} highlightState="blocker" />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.className).toContain("highlightBlocker");
+  });
+
+  it("applies highlightDependent class when highlightState is 'dependent'", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask()} onSelect={vi.fn()} highlightState="dependent" />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.className).toContain("highlightDependent");
+  });
+
+  it("applies dimmed class when highlightState is 'dimmed'", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask()} onSelect={vi.fn()} highlightState="dimmed" />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.className).toContain("dimmed");
+  });
+
+  it("applies no highlight class when highlightState is null", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask()} onSelect={vi.fn()} highlightState={null} />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.className).not.toContain("highlightBlocker");
+    expect(card.className).not.toContain("highlightDependent");
+    expect(card.className).not.toContain("dimmed");
+  });
+
+  it("applies no highlight class when highlightState is undefined", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask()} onSelect={vi.fn()} />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.className).not.toContain("highlightBlocker");
+    expect(card.className).not.toContain("highlightDependent");
+    expect(card.className).not.toContain("dimmed");
+  });
 });
