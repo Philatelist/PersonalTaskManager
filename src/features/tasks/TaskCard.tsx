@@ -75,6 +75,28 @@ export function TaskCard({ globalIndex, task, onSelect, onUpdated, onContextMenu
         ⠿
       </button>
 
+      {(task.isBlocked || task.isCyclic) && (
+        <div className={styles.badges}>
+          {task.isBlocked && (
+            <span
+              className={styles.blockedBadge}
+              title={task.unsatisfiedBlockerNames.join(", ")}
+              data-testid={`blocked-badge-${task.id}`}
+            >
+              Blocked
+            </span>
+          )}
+          {task.isCyclic && (
+            <span
+              className={styles.cyclicBadge}
+              data-testid={`cyclic-badge-${task.id}`}
+            >
+              ⚠ Cyclic
+            </span>
+          )}
+        </div>
+      )}
+
       <span className={styles.title}>{task.title}</span>
 
       <div className={styles.bottom}>

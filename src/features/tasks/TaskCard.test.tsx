@@ -177,4 +177,56 @@ describe("TaskCard", () => {
     expect(onUpdated).toHaveBeenCalledTimes(1);
     expect(onSelect).not.toHaveBeenCalled();
   });
+
+  // --- Blocked & Cyclic badge tests ---
+
+  it("renders Blocked badge when isBlocked is true", () => {
+    render(
+      <TaskCard
+        globalIndex={1}
+        task={makeTask({ isBlocked: true, unsatisfiedBlockerNames: ["Setup DB", "Write Tests"] })}
+        onSelect={vi.fn()}
+      />,
+    );
+    const badge = screen.getByTestId("blocked-badge-t1");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent("Blocked");
+    expect(badge).toHaveAttribute("title", "Setup DB, Write Tests");
+  });
+
+  it("does not render Blocked badge when isBlocked is false", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ isBlocked: false })} onSelect={vi.fn()} />,
+    );
+    expect(screen.queryByTestId("blocked-badge-t1")).not.toBeInTheDocument();
+  });
+
+  it("renders Cyclic badge when isCyclic is true", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ isCyclic: true })} onSelect={vi.fn()} />,
+    );
+    const badge = screen.getByTestId("cyclic-badge-t1");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent("Cyclic");
+  });
+
+  it("renders both Blocked and Cyclic badges simultaneously", () => {
+    render(
+      <TaskCard
+        globalIndex={1}
+        task={makeTask({ isBlocked: true, isCyclic: true, unsatisfiedBlockerNames: ["Blocker X"] })}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("blocked-badge-t1")).toBeInTheDocument();
+    expect(screen.getByTestId("cyclic-badge-t1")).toBeInTheDocument();
+  });
+
+  it("renders neither badge for tasks with no dependencies", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask()} onSelect={vi.fn()} />,
+    );
+    expect(screen.queryByTestId("blocked-badge-t1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("cyclic-badge-t1")).not.toBeInTheDocument();
+  });
 });
