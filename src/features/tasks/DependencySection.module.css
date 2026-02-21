@@ -1,0 +1,109 @@
+.section {
+  margin-top: 16px;
+}
+
+.sectionLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.subSection {
+  margin-bottom: 12px;
+}
+
+.subSectionHeader {
+  font-size: 12px;
+  font-weight: 500;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.rowTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.completed {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.deleted {
+  color: #bbb;
+  font-style: italic;
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+  flex-shrink: 0;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.statusBadgeDone {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.statusBadgeDeleted {
+  background: #fafafa;
+  color: #bbb;
+}
+
+.checkmark {
+  color: #4caf50;
+  flex-shrink: 0;
+}
+
+.removeButton {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #999;
+  font-size: 16px;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.removeButton:hover {
+  color: #e53935;
+}
+
+.addButton {
+  border: 1px dashed #ccc;
+  background: none;
+  cursor: pointer;
+  color: #666;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-top: 4px;
+  font-family: inherit;
+}
+
+.addButton:hover {
+  border-color: #999;
+  color: #333;
+}
