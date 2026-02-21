@@ -1,4 +1,4 @@
-use crate::models::{TaskDto, SubtaskDto, DependencyEdgeDto, CreateDependencyResult, TaskListResult};
+use crate::models::{TaskDto, SubtaskDto, DependencyDto, DependencyEdgeDto, CreateDependencyResult, TaskListResult};
 use rusqlite::Connection;
 
 /// Core implementation of task creation, separated from the Tauri command for testability.
@@ -854,7 +854,87 @@ pub fn get_task_impl(conn: &Connection, id: String) -> Result<TaskDto, String> {
 
     task.tags = get_tags_for_task(conn, &task.id)?;
     task.subtasks = get_subtasks_for_task(conn, &task.id)?;
+
+    // Populate blockers (tasks that block this task).
+    task.blockers = get_blockers_for_task(conn, &task.id)?;
+
+    // Populate dependents (tasks that this task blocks).
+    task.dependents = get_dependents_for_task(conn, &task.id)?;
+
+    // Compute SCC-based flags.
+    let sccs = compute_sccs(conn)?;
+    task.is_cyclic = task_is_cyclic(&sccs, &task.id);
+
+    // Compute blocking: unsatisfied non-cyclic blockers.
+    let mut unsatisfied_names: Vec<String> = Vec::new();
+    for blocker in &task.blockers {
+        if is_in_same_scc(&sccs, &task.id, &blocker.task_id) {
+            continue; // cyclic blocker — doesn't count
+        }
+        if blocker.task_status != "done" {
+            unsatisfied_names.push(blocker.task_title.clone());
+        }
+    }
+    if !unsatisfied_names.is_empty() {
+        task.is_blocked = true;
+        task.unsatisfied_blocker_names = unsatisfied_names;
+    }
+
     Ok(task)
+}
+
+/// Fetches blockers for a task (tasks that block it) as rich DependencyDto.
+fn get_blockers_for_task(conn: &Connection, task_id: &str) -> Result<Vec<DependencyDto>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT td.id, t.id, t.title, t.status
+             FROM task_dependencies td
+             JOIN tasks t ON t.id = td.blocker_task_id
+             WHERE td.dependent_task_id = ?1",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let deps = stmt
+        .query_map([task_id], |row| {
+            Ok(DependencyDto {
+                id: row.get(0)?,
+                task_id: row.get(1)?,
+                task_title: row.get(2)?,
+                task_status: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(deps)
+}
+
+/// Fetches dependents for a task (tasks that it blocks) as rich DependencyDto.
+fn get_dependents_for_task(conn: &Connection, task_id: &str) -> Result<Vec<DependencyDto>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT td.id, t.id, t.title, t.status
+             FROM task_dependencies td
+             JOIN tasks t ON t.id = td.dependent_task_id
+             WHERE td.blocker_task_id = ?1",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let deps = stmt
+        .query_map([task_id], |row| {
+            Ok(DependencyDto {
+                id: row.get(0)?,
+                task_id: row.get(1)?,
+                task_title: row.get(2)?,
+                task_status: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(deps)
 }
 
 #[tauri::command]
@@ -3634,5 +3714,63 @@ mod tests {
         let task_b = result.tasks.iter().find(|t| t.id == b.id).unwrap();
         assert!(!task_b.is_blocked, "satisfied blocker should not block");
         assert!(task_b.unsatisfied_blocker_names.is_empty());
+    }
+
+    // ========= get_task_impl dependency enrichment tests =========
+
+    #[test]
+    fn test_get_task_returns_blockers() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "Blocker A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "Dependent B".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+
+        let task_b = get_task_impl(&conn, b.id.clone()).unwrap();
+        assert_eq!(task_b.blockers.len(), 1);
+        assert_eq!(task_b.blockers[0].task_id, a.id);
+        assert_eq!(task_b.blockers[0].task_title, "Blocker A");
+        assert_eq!(task_b.blockers[0].task_status, "active");
+        assert!(task_b.dependents.is_empty());
+    }
+
+    #[test]
+    fn test_get_task_returns_dependents() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "Blocker A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "Dependent B".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+
+        let task_a = get_task_impl(&conn, a.id.clone()).unwrap();
+        assert_eq!(task_a.dependents.len(), 1);
+        assert_eq!(task_a.dependents[0].task_id, b.id);
+        assert_eq!(task_a.dependents[0].task_title, "Dependent B");
+        assert!(task_a.blockers.is_empty());
+    }
+
+    #[test]
+    fn test_get_task_computed_flags() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "B".to_string(), None, None, None).unwrap();
+        let c = create_task_impl(&conn, "External C".to_string(), None, None, None).unwrap();
+        // A↔B cycle + C blocks B
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        create_dependency_impl(&conn, b.id.clone(), a.id.clone()).unwrap();
+        create_dependency_impl(&conn, c.id.clone(), b.id.clone()).unwrap();
+
+        let task_b = get_task_impl(&conn, b.id.clone()).unwrap();
+        assert!(task_b.is_cyclic, "B should be cyclic (A↔B)");
+        assert!(task_b.is_blocked, "B should be blocked by C");
+        assert_eq!(task_b.unsatisfied_blocker_names, vec!["External C"]);
+
+        // A is cyclic but not blocked (only cyclic blocker B)
+        let task_a = get_task_impl(&conn, a.id.clone()).unwrap();
+        assert!(task_a.is_cyclic);
+        assert!(!task_a.is_blocked);
+
+        // C has no blockers and is not cyclic
+        let task_c = get_task_impl(&conn, c.id.clone()).unwrap();
+        assert!(!task_c.is_cyclic);
+        assert!(!task_c.is_blocked);
     }
 }
