@@ -10,6 +10,9 @@ vi.mock("./task-service", () => ({
   subtaskDelete: vi.fn().mockResolvedValue(undefined),
   subtaskCreate: vi.fn().mockResolvedValue({}),
   subtaskReorder: vi.fn().mockResolvedValue(undefined),
+  taskList: vi.fn().mockResolvedValue({ tasks: [], dependencies: [] }),
+  dependencyCreate: vi.fn().mockResolvedValue({ edge: { id: "d1", blockerTaskId: "x", dependentTaskId: "y" }, isCyclic: false }),
+  dependencyDelete: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { TaskDetailView } from "./TaskDetailView";
@@ -495,5 +498,26 @@ describe("TaskDetailView", () => {
     await screen.findByTestId("task-detail-view");
 
     expect(screen.getByTestId("subtask-add-input")).toHaveAttribute("aria-label", "Add subtask");
+  });
+
+  it("shows blocking toast when Mark as Done is rejected by BlockedByUnsatisfiedDependencies", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    mockedTaskUpdate.mockRejectedValueOnce(
+      new Error("BlockedByUnsatisfiedDependencies: Setup Database, Write Tests"),
+    );
+    const onBack = vi.fn();
+    render(
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={onBack} />,
+    );
+    await screen.findByTestId("task-detail-view");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("mark-done-button"));
+    });
+
+    expect(onBack).not.toHaveBeenCalled();
+    expect(await screen.findByTestId("toast")).toHaveTextContent(
+      "Cannot mark as done. Blocked by: Setup Database, Write Tests",
+    );
   });
 });
