@@ -14,6 +14,19 @@ export interface Subtask {
   sortOrder: number;
 }
 
+export interface DependencyEdge {
+  id: string;
+  blockerTaskId: string;
+  dependentTaskId: string;
+}
+
+export interface Dependency {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  taskStatus: TaskStatus;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -23,6 +36,8 @@ export interface Task {
   tags: string[];
   dueDate: string | null;
   subtasks: Subtask[];
+  blockers: Dependency[];
+  dependents: Dependency[];
   isCyclic: boolean;
   isBlocked: boolean;
   unsatisfiedBlockerNames: string[];

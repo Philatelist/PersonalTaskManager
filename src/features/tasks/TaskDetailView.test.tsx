@@ -30,6 +30,11 @@ const sampleTask = {
   tags: ["bug", "alpha"],
   dueDate: "2025-06-15",
   subtasks: [],
+  blockers: [],
+  dependents: [],
+  isCyclic: false,
+  isBlocked: false,
+  unsatisfiedBlockerNames: [],
   createdAt: "2025-01-10T12:00:00Z",
   updatedAt: "2025-01-15T14:30:00Z",
 };
