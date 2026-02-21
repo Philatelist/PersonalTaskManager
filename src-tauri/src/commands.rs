@@ -244,6 +244,26 @@ pub fn update_task_impl(
         }
     }
 
+    // Blocking enforcement: reject "done" if unsatisfied non-cyclic blockers exist.
+    if status.as_deref() == Some("done") {
+        let blockers = get_blockers_for_task(conn, &id)?;
+        if !blockers.is_empty() {
+            let sccs = compute_sccs(conn)?;
+            let unsatisfied: Vec<String> = blockers
+                .iter()
+                .filter(|b| b.task_status != "done")
+                .filter(|b| !is_in_same_scc(&sccs, &id, &b.task_id))
+                .map(|b| b.task_title.clone())
+                .collect();
+            if !unsatisfied.is_empty() {
+                return Err(format!(
+                    "BlockedByUnsatisfiedDependencies: {}",
+                    unsatisfied.join(", ")
+                ));
+            }
+        }
+    }
+
     let now = chrono::Utc::now().to_rfc3339();
 
     let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
@@ -3772,5 +3792,103 @@ mod tests {
         let task_c = get_task_impl(&conn, c.id.clone()).unwrap();
         assert!(!task_c.is_cyclic);
         assert!(!task_c.is_blocked);
+    }
+
+    // ===== Blocking enforcement tests =====
+
+    #[test]
+    fn test_blocking_enforcement_rejects_done_with_unsatisfied_blocker() {
+        let conn = test_db();
+        let blocker = create_task_impl(&conn, "Blocker".to_string(), None, None, None).unwrap();
+        let dependent = create_task_impl(&conn, "Dependent".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, blocker.id.clone(), dependent.id.clone()).unwrap();
+
+        let result = update_task_impl(
+            &conn, dependent.id.clone(), None, None,
+            Some("done".to_string()), None, None,
+        );
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("BlockedByUnsatisfiedDependencies"));
+        assert!(err.contains("Blocker"));
+    }
+
+    #[test]
+    fn test_blocking_enforcement_allows_done_with_only_cyclic_blockers() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "Task A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "Task B".to_string(), None, None, None).unwrap();
+        // Create cycle: A→B and B→A
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        create_dependency_impl(&conn, b.id.clone(), a.id.clone()).unwrap();
+
+        // Both should be allowed to mark as done (only cyclic blockers)
+        let result = update_task_impl(
+            &conn, a.id.clone(), None, None,
+            Some("done".to_string()), None, None,
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_blocking_enforcement_allows_done_with_satisfied_blockers() {
+        let conn = test_db();
+        let blocker = create_task_impl(&conn, "Blocker".to_string(), None, None, None).unwrap();
+        let dependent = create_task_impl(&conn, "Dependent".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, blocker.id.clone(), dependent.id.clone()).unwrap();
+
+        // Mark blocker as done first
+        update_task_impl(
+            &conn, blocker.id.clone(), None, None,
+            Some("done".to_string()), None, None,
+        ).unwrap();
+
+        // Now dependent should be allowed to mark as done
+        let result = update_task_impl(
+            &conn, dependent.id.clone(), None, None,
+            Some("done".to_string()), None, None,
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_blocking_enforcement_mixed_cyclic_and_non_cyclic_rejects() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "Task A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "Task B".to_string(), None, None, None).unwrap();
+        let c = create_task_impl(&conn, "Non-cyclic Blocker".to_string(), None, None, None).unwrap();
+
+        // A→B and B→A (cycle)
+        create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        create_dependency_impl(&conn, b.id.clone(), a.id.clone()).unwrap();
+        // C→A (non-cyclic blocker)
+        create_dependency_impl(&conn, c.id.clone(), a.id.clone()).unwrap();
+
+        let result = update_task_impl(
+            &conn, a.id.clone(), None, None,
+            Some("done".to_string()), None, None,
+        );
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("BlockedByUnsatisfiedDependencies"));
+        assert!(err.contains("Non-cyclic Blocker"));
+        // Should NOT list Task B (cyclic blocker)
+        assert!(!err.contains("Task B"));
+    }
+
+    #[test]
+    fn test_blocking_enforcement_delete_always_allowed() {
+        let conn = test_db();
+        let blocker = create_task_impl(&conn, "Blocker".to_string(), None, None, None).unwrap();
+        let dependent = create_task_impl(&conn, "Dependent".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, blocker.id.clone(), dependent.id.clone()).unwrap();
+
+        // Delete should work even with unsatisfied blockers
+        let result = update_task_impl(
+            &conn, dependent.id.clone(), None, None,
+            Some("deleted".to_string()), None, None,
+        );
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().status, "deleted");
     }
 }
