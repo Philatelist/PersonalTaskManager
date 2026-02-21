@@ -121,3 +121,17 @@
   color: #e65100;
   letter-spacing: 0.3px;
 }
+
+.highlightBlocker {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.3);
+}
+
+.highlightDependent {
+  border-color: #388e3c;
+  box-shadow: 0 0 0 2px rgba(56, 142, 60, 0.3);
+}
+
+.dimmed {
+  opacity: 0.35;
+}
