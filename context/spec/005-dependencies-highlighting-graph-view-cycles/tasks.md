@@ -66,7 +66,7 @@
 
 - [x] **Sub-task 1:** Modify `update_task_impl` in `commands.rs`. When `status = Some("done")`: fetch direct blockers, run `compute_sccs`, filter to unsatisfied non-cyclic blockers, if any remain return error `"BlockedByUnsatisfiedDependencies: Task A, Task B"`. Non-"done" transitions (e.g., delete) skip this check entirely. Write Rust tests: blocked task → "done" rejected with correct blocker names; task with only cyclic blockers → "done" allowed; task with satisfied blockers → "done" allowed; task with mixed cyclic + non-cyclic → "done" rejected (lists only non-cyclic names); "deleted" transition always allowed regardless of blockers. Run `cargo test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 2:** Update `handleMarkDone` in `TaskDetailView.tsx`. Wrap the `taskUpdate` call in try/catch. If the error message contains `"BlockedByUnsatisfiedDependencies"`, show a Toast: "Cannot mark as done. Blocked by: [names]". Write a frontend test: mock `taskUpdate` to reject with `BlockedByUnsatisfiedDependencies`, verify toast appears with blocker names. Run `pnpm test`. **[Agent: general-purpose]**
+- [x] **Sub-task 2:** Update `handleMarkDone` in `TaskDetailView.tsx`. Wrap the `taskUpdate` call in try/catch. If the error message contains `"BlockedByUnsatisfiedDependencies"`, show a Toast: "Cannot mark as done. Blocked by: [names]". Write a frontend test: mock `taskUpdate` to reject with `BlockedByUnsatisfiedDependencies`, verify toast appears with blocker names. Run `pnpm test`. **[Agent: general-purpose]**
 
 - [ ] **Sub-task 3: Verify** — Run full test suite (`cargo test` + `pnpm test`). Confirm blocking enforcement works end-to-end and all other features remain unaffected. **[Agent: general-purpose]**
 

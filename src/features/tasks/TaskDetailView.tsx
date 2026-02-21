@@ -139,8 +139,14 @@ export function TaskDetailView({
     try {
       await taskUpdate(taskId, { status: "done" });
       onBack();
-    } catch {
-      setToastMessage("Failed to mark as done");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("BlockedByUnsatisfiedDependencies")) {
+        const names = msg.replace("BlockedByUnsatisfiedDependencies: ", "");
+        setToastMessage(`Cannot mark as done. Blocked by: ${names}`);
+      } else {
+        setToastMessage("Failed to mark as done");
+      }
     }
   }, [taskId, onBack]);
 
