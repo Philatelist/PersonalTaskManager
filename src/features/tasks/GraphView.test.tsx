@@ -34,8 +34,15 @@ vi.mock("@xyflow/react", () => {
               {NodeComponent && <NodeComponent data={node.data} />}
             </div>
           ))}
-          {props.edges.map((edge) => (
-            <div key={edge.id} data-testid={`flow-edge-${edge.id}`} data-source={edge.source} data-target={edge.target} />
+          {props.edges.map((edge: { id: string; source: string; target: string; className?: string; data?: { isCyclic?: boolean } }) => (
+            <div
+              key={edge.id}
+              data-testid={`flow-edge-${edge.id}`}
+              data-source={edge.source}
+              data-target={edge.target}
+              className={edge.className ?? ""}
+              data-cyclic={edge.data?.isCyclic ? "true" : "false"}
+            />
           ))}
         </div>
       );
@@ -293,5 +300,44 @@ describe("GraphView", () => {
     await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "dependencies");
     expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
     expect(screen.queryByTestId("flow-edge-taskref-t1-t2")).not.toBeInTheDocument();
+  });
+
+  it("cyclic edges get the cyclic-edge class", () => {
+    const tasks = makeTasks(3);
+    tasks[0].isCyclic = true;
+    tasks[1].isCyclic = true;
+    // t1 and t2 are cyclic, t3 is not
+    const deps: DependencyEdge[] = [
+      { id: "dep1", blockerTaskId: "t1", dependentTaskId: "t2" },
+      { id: "dep2", blockerTaskId: "t2", dependentTaskId: "t3" },
+    ];
+    render(
+      <GraphView tasks={tasks} dependencies={deps} onSelectTask={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    // dep1: both t1 and t2 are cyclic → cyclic edge
+    const edge1 = screen.getByTestId("flow-edge-dep1");
+    expect(edge1.className).toContain("cyclic-edge");
+    expect(edge1).toHaveAttribute("data-cyclic", "true");
+
+    // dep2: t2 is cyclic but t3 is not → non-cyclic edge
+    const edge2 = screen.getByTestId("flow-edge-dep2");
+    expect(edge2.className).not.toContain("cyclic-edge");
+    expect(edge2).toHaveAttribute("data-cyclic", "false");
+  });
+
+  it("non-cyclic edges do not get the cyclic style", () => {
+    const tasks = makeTasks(2);
+    // Neither task is cyclic
+    const deps: DependencyEdge[] = [
+      { id: "dep1", blockerTaskId: "t1", dependentTaskId: "t2" },
+    ];
+    render(
+      <GraphView tasks={tasks} dependencies={deps} onSelectTask={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    const edge = screen.getByTestId("flow-edge-dep1");
+    expect(edge.className).not.toContain("cyclic-edge");
+    expect(edge).toHaveAttribute("data-cyclic", "false");
   });
 });

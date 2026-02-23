@@ -115,17 +115,30 @@ export function GraphView({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  const cyclicTaskIds = useMemo(
+    () => new Set(tasks.filter((t) => t.isCyclic).map((t) => t.id)),
+    [tasks],
+  );
+
   const dependencyEdges: Edge[] = useMemo(
     () =>
-      dependencies.map((dep) => ({
-        id: dep.id,
-        source: dep.blockerTaskId,
-        target: dep.dependentTaskId,
-        type: "default",
-        markerEnd: { type: MarkerType.ArrowClosed },
-        data: { edgeType: "dependency" },
-      })),
-    [dependencies],
+      dependencies.map((dep) => {
+        const isCyclicEdge = cyclicTaskIds.has(dep.blockerTaskId) && cyclicTaskIds.has(dep.dependentTaskId);
+        return {
+          id: dep.id,
+          source: dep.blockerTaskId,
+          target: dep.dependentTaskId,
+          type: "default",
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            ...(isCyclicEdge ? { color: "#e65100" } : {}),
+          },
+          style: isCyclicEdge ? { stroke: "#e65100", strokeWidth: 2 } : undefined,
+          className: isCyclicEdge ? "cyclic-edge" : undefined,
+          data: { edgeType: "dependency", isCyclic: isCyclicEdge },
+        };
+      }),
+    [dependencies, cyclicTaskIds],
   );
 
   const taskrefEdges: Edge[] = useMemo(() => {
