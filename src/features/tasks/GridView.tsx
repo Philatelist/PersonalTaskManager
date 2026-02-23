@@ -8,6 +8,7 @@ import { EmptyState } from "./EmptyState";
 import { CreateTaskModal } from "./CreateTaskModal";
 import { taskReorder } from "./task-service";
 import { TaskCardContextMenu } from "./TaskCardContextMenu";
+import { GraphView } from "./GraphView";
 import type { HighlightState } from "./TaskCard";
 import styles from "./GridView.module.css";
 
@@ -28,6 +29,7 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
   const [currentPage, setCurrentPage] = useState(initialPage ?? 1);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showGraph, setShowGraph] = useState(false);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const movedTaskIdRef = useRef<string | null>(null);
   const tasksVersionRef = useRef(0);
@@ -221,6 +223,15 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
         >
           + Add task
         </button>
+        {tasks.length > 0 && (
+          <button
+            className={styles.graphButton}
+            onClick={() => setShowGraph(true)}
+            data-testid="graph-view-button"
+          >
+            Graph View
+          </button>
+        )}
       </div>
       {tasks.length === 0 ? (
         <EmptyState />
@@ -264,6 +275,18 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
         <CreateTaskModal
           onCreated={refresh}
           onClose={() => setShowCreateModal(false)}
+        />
+      )}
+      {showGraph && (
+        <GraphView
+          tasks={tasks}
+          dependencies={dependencies}
+          onSelectTask={(taskId: string) => {
+            setShowGraph(false);
+            const index = tasks.findIndex((t) => t.id === taskId);
+            onSelectTask(taskId, index + 1);
+          }}
+          onClose={() => setShowGraph(false)}
         />
       )}
     </div>

@@ -21,6 +21,17 @@ vi.mock("./useGridLayout", () => ({
   useGridLayout: () => ({ cols: mockCols, cardsPerPage: mockCardsPerPage, containerRef: vi.fn() }),
 }));
 
+vi.mock("./GraphView", () => ({
+  GraphView: function MockGraphView(props: { onSelectTask: (id: string) => void; onClose: () => void }) {
+    return (
+      <div data-testid="graph-view-overlay">
+        <button data-testid="graph-close-button" onClick={props.onClose}>Close</button>
+        <button data-testid="graph-select-t1" onClick={() => props.onSelectTask("t1")}>Select t1</button>
+      </div>
+    );
+  },
+}));
+
 vi.mock("./task-service", () => ({
   taskUpdate: vi.fn().mockResolvedValue({}),
   taskReorder: vi.fn().mockResolvedValue(undefined),
@@ -623,5 +634,63 @@ describe("GridView hover highlighting", () => {
     expect(card2.className).not.toContain("highlightBlocker");
     expect(card2.className).not.toContain("highlightDependent");
     expect(card2.className).not.toContain("dimmed");
+  });
+});
+
+describe("GridView graph view button", () => {
+  it("shows Graph View button when tasks exist", () => {
+    mockTasks = makeTasks(3);
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.getByTestId("graph-view-button")).toBeInTheDocument();
+    expect(screen.getByText("Graph View")).toBeInTheDocument();
+  });
+
+  it("does not show Graph View button when task list is empty", () => {
+    mockTasks = [];
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.queryByTestId("graph-view-button")).not.toBeInTheDocument();
+  });
+
+  it("clicking Graph View button opens graph overlay", async () => {
+    const user = userEvent.setup();
+    mockTasks = makeTasks(3);
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.queryByTestId("graph-view-overlay")).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("graph-view-button"));
+
+    expect(screen.getByTestId("graph-view-overlay")).toBeInTheDocument();
+  });
+
+  it("closing graph view returns to grid", async () => {
+    const user = userEvent.setup();
+    mockTasks = makeTasks(3);
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    await user.click(screen.getByTestId("graph-view-button"));
+    expect(screen.getByTestId("graph-view-overlay")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("graph-close-button"));
+    expect(screen.queryByTestId("graph-view-overlay")).not.toBeInTheDocument();
+  });
+
+  it("selecting a node in graph view navigates to task detail", async () => {
+    const user = userEvent.setup();
+    const onSelectTask = vi.fn();
+    mockTasks = makeTasks(3);
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={onSelectTask} />);
+
+    await user.click(screen.getByTestId("graph-view-button"));
+    await user.click(screen.getByTestId("graph-select-t1"));
+
+    expect(onSelectTask).toHaveBeenCalledWith("t1", 1);
+    expect(screen.queryByTestId("graph-view-overlay")).not.toBeInTheDocument();
   });
 });
