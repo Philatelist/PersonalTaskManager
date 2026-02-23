@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import ReactFlow, {
   Handle,
@@ -97,12 +97,16 @@ function TaskNodeComponent({ data }: NodeProps<Node<TaskNodeData>>) {
 
 const nodeTypes = { taskNode: TaskNodeComponent };
 
+type EdgeMode = "dependencies" | "all";
+
 export function GraphView({
   tasks,
   dependencies,
   onSelectTask,
   onClose,
 }: GraphViewProps) {
+  const [edgeMode, setEdgeMode] = useState<EdgeMode>("dependencies");
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -124,9 +128,34 @@ export function GraphView({
     [dependencies],
   );
 
+  const taskrefEdges: Edge[] = useMemo(() => {
+    const edges: Edge[] = [];
+    for (const task of tasks) {
+      for (const sub of task.subtasks) {
+        if (sub.type === "taskref" && sub.refTaskId) {
+          edges.push({
+            id: `taskref-${task.id}-${sub.refTaskId}`,
+            source: task.id,
+            target: sub.refTaskId,
+            type: "default",
+            style: { strokeDasharray: "5 5", stroke: "#9c27b0" },
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#9c27b0" },
+            data: { edgeType: "taskref" },
+          });
+        }
+      }
+    }
+    return edges;
+  }, [tasks]);
+
+  const allEdges = useMemo(
+    () => edgeMode === "all" ? [...dependencyEdges, ...taskrefEdges] : dependencyEdges,
+    [edgeMode, dependencyEdges, taskrefEdges],
+  );
+
   const nodes = useMemo(
-    () => layoutNodes(tasks, dependencyEdges),
-    [tasks, dependencyEdges],
+    () => layoutNodes(tasks, allEdges),
+    [tasks, allEdges],
   );
 
   const handleNodeClick = useCallback(
@@ -141,6 +170,15 @@ export function GraphView({
       <div className={styles.header}>
         <span className={styles.headerTitle}>Graph View</span>
         <div className={styles.headerControls}>
+          <select
+            className={styles.edgeToggle}
+            value={edgeMode}
+            onChange={(e) => setEdgeMode(e.target.value as EdgeMode)}
+            data-testid="graph-edge-toggle"
+          >
+            <option value="dependencies">Dependencies only</option>
+            <option value="all">Dependencies + Subtask refs</option>
+          </select>
           <button
             className={styles.closeButton}
             onClick={onClose}
@@ -153,7 +191,7 @@ export function GraphView({
       <div className={styles.flowContainer} data-testid="graph-flow-container">
         <ReactFlow
           nodes={nodes}
-          edges={dependencyEdges}
+          edges={allEdges}
           nodeTypes={nodeTypes}
           onNodeClick={handleNodeClick}
           fitView

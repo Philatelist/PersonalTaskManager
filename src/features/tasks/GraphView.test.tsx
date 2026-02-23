@@ -198,4 +198,100 @@ describe("GraphView", () => {
 
     expect(screen.getByText("Graph View")).toBeInTheDocument();
   });
+
+  it("renders edge toggle with default 'Dependencies only'", () => {
+    render(
+      <GraphView tasks={makeTasks(2)} dependencies={[]} onSelectTask={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    const toggle = screen.getByTestId("graph-edge-toggle") as HTMLSelectElement;
+    expect(toggle).toBeInTheDocument();
+    expect(toggle.value).toBe("dependencies");
+  });
+
+  it("dependency edges appear in both modes", async () => {
+    const user = userEvent.setup();
+    const tasks = makeTasks(2);
+    const deps: DependencyEdge[] = [
+      { id: "dep1", blockerTaskId: "t1", dependentTaskId: "t2" },
+    ];
+    render(
+      <GraphView tasks={tasks} dependencies={deps} onSelectTask={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    // Dependencies mode (default)
+    expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
+
+    // Switch to "all" mode
+    await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "all");
+
+    expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
+  });
+
+  it("taskref edges appear only in combined mode", async () => {
+    const user = userEvent.setup();
+    const tasks = makeTasks(2);
+    tasks[0].subtasks = [
+      {
+        id: "s1",
+        taskId: "t1",
+        type: "taskref",
+        label: null,
+        isDone: false,
+        refTaskId: "t2",
+        refTaskTitle: "Task 2",
+        refTaskStatus: "active",
+        sortOrder: 0,
+      },
+    ];
+    render(
+      <GraphView tasks={tasks} dependencies={[]} onSelectTask={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    // Default mode: no taskref edges
+    expect(screen.queryByTestId("flow-edge-taskref-t1-t2")).not.toBeInTheDocument();
+
+    // Switch to "all" mode
+    await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "all");
+
+    expect(screen.getByTestId("flow-edge-taskref-t1-t2")).toBeInTheDocument();
+  });
+
+  it("toggle switches edge modes correctly", async () => {
+    const user = userEvent.setup();
+    const tasks = makeTasks(2);
+    tasks[0].subtasks = [
+      {
+        id: "s1",
+        taskId: "t1",
+        type: "taskref",
+        label: null,
+        isDone: false,
+        refTaskId: "t2",
+        refTaskTitle: "Task 2",
+        refTaskStatus: "active",
+        sortOrder: 0,
+      },
+    ];
+    const deps: DependencyEdge[] = [
+      { id: "dep1", blockerTaskId: "t1", dependentTaskId: "t2" },
+    ];
+    render(
+      <GraphView tasks={tasks} dependencies={deps} onSelectTask={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    // Default: only dependency edges
+    expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
+    expect(screen.queryByTestId("flow-edge-taskref-t1-t2")).not.toBeInTheDocument();
+
+    // Switch to "all"
+    await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "all");
+    expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
+    expect(screen.getByTestId("flow-edge-taskref-t1-t2")).toBeInTheDocument();
+
+    // Switch back to "dependencies"
+    await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "dependencies");
+    expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
+    expect(screen.queryByTestId("flow-edge-taskref-t1-t2")).not.toBeInTheDocument();
+  });
 });
