@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import { useTasks } from "./use-tasks";
 import { useGridLayout } from "./useGridLayout";
@@ -8,6 +8,7 @@ import { EmptyState } from "./EmptyState";
 import { CreateTaskModal } from "./CreateTaskModal";
 import { taskReorder } from "./task-service";
 import { TaskCardContextMenu } from "./TaskCardContextMenu";
+import type { HighlightState } from "./TaskCard";
 import styles from "./GridView.module.css";
 
 interface ContextMenuState {
@@ -22,16 +23,64 @@ interface GridViewProps {
 }
 
 export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewProps) {
-  const { tasks, setTasks, loading, refresh } = useTasks();
+  const { tasks, setTasks, dependencies, loading, refresh } = useTasks();
   const { cols, cardsPerPage, containerRef } = useGridLayout();
   const [currentPage, setCurrentPage] = useState(initialPage ?? 1);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const movedTaskIdRef = useRef<string | null>(null);
   const tasksVersionRef = useRef(0);
   const dragStartVersionRef = useRef(0);
 
   const totalPages = cardsPerPage > 0 ? Math.ceil(tasks.length / cardsPerPage) : 0;
+
+  // Lookup maps: taskId → set of direct blocker/dependent task ids
+  const blockersByTask = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const edge of dependencies) {
+      let set = map.get(edge.dependentTaskId);
+      if (!set) {
+        set = new Set();
+        map.set(edge.dependentTaskId, set);
+      }
+      set.add(edge.blockerTaskId);
+    }
+    return map;
+  }, [dependencies]);
+
+  const dependentsByTask = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const edge of dependencies) {
+      let set = map.get(edge.blockerTaskId);
+      if (!set) {
+        set = new Set();
+        map.set(edge.blockerTaskId, set);
+      }
+      set.add(edge.dependentTaskId);
+    }
+    return map;
+  }, [dependencies]);
+
+  // Compute per-card highlight states based on hovered task
+  const highlightStates = useMemo(() => {
+    if (!hoveredTaskId) return undefined;
+    const states: Record<string, HighlightState> = {};
+    const blockers = blockersByTask.get(hoveredTaskId) ?? new Set();
+    const deps = dependentsByTask.get(hoveredTaskId) ?? new Set();
+    for (const task of tasks) {
+      if (task.id === hoveredTaskId) {
+        states[task.id] = null;
+      } else if (blockers.has(task.id)) {
+        states[task.id] = "blocker";
+      } else if (deps.has(task.id)) {
+        states[task.id] = "dependent";
+      } else {
+        states[task.id] = "dimmed";
+      }
+    }
+    return states;
+  }, [hoveredTaskId, tasks, blockersByTask, dependentsByTask]);
 
   // Clamp currentPage when totalPages changes (resize or task removal)
   useEffect(() => {
@@ -143,6 +192,14 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
     [],
   );
 
+  const handleCardMouseEnter = useCallback((taskId: string) => {
+    setHoveredTaskId(taskId);
+  }, []);
+
+  const handleCardMouseLeave = useCallback(() => {
+    setHoveredTaskId(null);
+  }, []);
+
   if (loading) {
     return (
       <div className={styles.container} data-testid="grid-loading">
@@ -180,6 +237,9 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
               onReorder={handleReorder}
               onDragStart={handleDragStart}
               onCardContextMenu={handleCardContextMenu}
+              highlightStates={highlightStates}
+              onCardMouseEnter={handleCardMouseEnter}
+              onCardMouseLeave={handleCardMouseLeave}
             />
           </div>
           {totalPages > 1 && (
