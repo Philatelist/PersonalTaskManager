@@ -92,9 +92,9 @@
 
 - [x] **Sub-task 1:** Add `highlightState` prop to `TaskCard.tsx`. Type: `"blocker" | "dependent" | "dimmed" | null | undefined`. Apply CSS classes conditionally: `.highlightBlocker`, `.highlightDependent`, `.dimmed`. Add CSS for these classes in `TaskCard.module.css`: distinct border colors for blocker/dependent, reduced opacity for dimmed. Update `TaskGrid.tsx` to pass through `highlightState` and `onMouseEnter`/`onMouseLeave` callbacks. Write tests: each highlight state applies the correct CSS class; null/undefined applies no class. Run `pnpm test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 2:** Add hover highlighting state to `GridView.tsx`. State: `hoveredTaskId: string | null`. Build `blockersByTask` and `dependentsByTask` lookup maps from `dependencies` edge list (memoized via `useMemo`). Compute per-card `highlightState` based on `hoveredTaskId`. Pass `highlightState`, `onMouseEnter`, `onMouseLeave` through to `TaskGrid` → `TaskCard`. Write tests: hovering a card sets correct highlight states on related cards; mouse leave clears all highlighting; tasks with no dependencies show dimming on other cards but no highlight on self. Run `pnpm test`. **[Agent: general-purpose]**
+- [x] **Sub-task 2:** Add hover highlighting state to `GridView.tsx`. State: `hoveredTaskId: string | null`. Build `blockersByTask` and `dependentsByTask` lookup maps from `dependencies` edge list (memoized via `useMemo`). Compute per-card `highlightState` based on `hoveredTaskId`. Pass `highlightState`, `onMouseEnter`, `onMouseLeave` through to `TaskGrid` → `TaskCard`. Write tests: hovering a card sets correct highlight states on related cards; mouse leave clears all highlighting; tasks with no dependencies show dimming on other cards but no highlight on self. Run `pnpm test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 3: Verify** — Run full test suite (`cargo test` + `pnpm test`). Confirm hover highlighting works correctly and doesn't interfere with existing card interactions. **[Agent: general-purpose]**
+- [x] **Sub-task 3: Verify** — Run full test suite (`cargo test` + `pnpm test`). Confirm hover highlighting works correctly and doesn't interfere with existing card interactions. **[Agent: general-purpose]**
 
 ---
 
