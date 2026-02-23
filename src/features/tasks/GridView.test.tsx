@@ -2,9 +2,11 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { TaskWithProgress } from "./use-tasks";
+import type { DependencyEdge } from "./types";
 
 // --- Mocks ---
 let mockTasks: TaskWithProgress[] = [];
+let mockDependencies: DependencyEdge[] = [];
 let mockLoading = false;
 const mockRefresh = vi.fn();
 const mockSetTasks = vi.fn();
@@ -12,7 +14,7 @@ let mockCols = 3;
 let mockCardsPerPage = 4;
 
 vi.mock("./use-tasks", () => ({
-  useTasks: () => ({ tasks: mockTasks, setTasks: mockSetTasks, loading: mockLoading, error: null, refresh: mockRefresh }),
+  useTasks: () => ({ tasks: mockTasks, setTasks: mockSetTasks, dependencies: mockDependencies, loading: mockLoading, error: null, refresh: mockRefresh }),
 }));
 
 vi.mock("./useGridLayout", () => ({
@@ -57,6 +59,7 @@ beforeEach(() => {
   mockCols = 3;
   mockCardsPerPage = 4;
   mockTasks = [];
+  mockDependencies = [];
   mockLoading = false;
 });
 
@@ -497,5 +500,128 @@ describe("GridView task creation", () => {
 
     expect(screen.getByTestId("grid-loading")).toBeInTheDocument();
     expect(screen.queryByTestId("add-task-button")).not.toBeInTheDocument();
+  });
+});
+
+describe("GridView hover highlighting", () => {
+  it("hovering a card highlights its blockers, dependents, and dims unrelated cards", () => {
+    // t1 blocks t2 (t1 is blocker of t2, t2 is dependent of t1)
+    mockTasks = makeTasks(4);
+    mockDependencies = [
+      { id: "dep1", blockerTaskId: "t1", dependentTaskId: "t2" },
+    ];
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    // Hover t2 — t1 should be "blocker", t3/t4 should be "dimmed", t2 should have no highlight class
+    fireEvent.mouseEnter(screen.getByTestId("task-card-t2"));
+
+    const card1 = screen.getByTestId("task-card-t1");
+    const card2 = screen.getByTestId("task-card-t2");
+    const card3 = screen.getByTestId("task-card-t3");
+    const card4 = screen.getByTestId("task-card-t4");
+
+    expect(card1.className).toContain("highlightBlocker");
+    expect(card2.className).not.toContain("highlightBlocker");
+    expect(card2.className).not.toContain("highlightDependent");
+    expect(card2.className).not.toContain("dimmed");
+    expect(card3.className).toContain("dimmed");
+    expect(card4.className).toContain("dimmed");
+  });
+
+  it("hovering a blocker highlights its dependents", () => {
+    mockTasks = makeTasks(3);
+    mockDependencies = [
+      { id: "dep1", blockerTaskId: "t1", dependentTaskId: "t2" },
+    ];
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    // Hover t1 — t2 should be "dependent", t3 should be "dimmed"
+    fireEvent.mouseEnter(screen.getByTestId("task-card-t1"));
+
+    expect(screen.getByTestId("task-card-t2").className).toContain("highlightDependent");
+    expect(screen.getByTestId("task-card-t3").className).toContain("dimmed");
+  });
+
+  it("mouse leave clears all highlighting", () => {
+    mockTasks = makeTasks(3);
+    mockDependencies = [
+      { id: "dep1", blockerTaskId: "t1", dependentTaskId: "t2" },
+    ];
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    // Hover then leave
+    fireEvent.mouseEnter(screen.getByTestId("task-card-t2"));
+    fireEvent.mouseLeave(screen.getByTestId("task-card-t2"));
+
+    const card1 = screen.getByTestId("task-card-t1");
+    const card2 = screen.getByTestId("task-card-t2");
+    const card3 = screen.getByTestId("task-card-t3");
+
+    expect(card1.className).not.toContain("highlightBlocker");
+    expect(card1.className).not.toContain("dimmed");
+    expect(card2.className).not.toContain("highlightDependent");
+    expect(card3.className).not.toContain("dimmed");
+  });
+
+  it("no highlighting when no task is hovered", () => {
+    mockTasks = makeTasks(3);
+    mockDependencies = [
+      { id: "dep1", blockerTaskId: "t1", dependentTaskId: "t2" },
+    ];
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    // No hover — no cards should have highlight or dimmed classes
+    for (const id of ["t1", "t2", "t3"]) {
+      const card = screen.getByTestId(`task-card-${id}`);
+      expect(card.className).not.toContain("highlightBlocker");
+      expect(card.className).not.toContain("highlightDependent");
+      expect(card.className).not.toContain("dimmed");
+    }
+  });
+
+  it("hovering a task with no dependencies dims all other cards", () => {
+    mockTasks = makeTasks(3);
+    mockDependencies = []; // no deps at all
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByTestId("task-card-t1"));
+
+    // t1 is hovered — no highlight on self, all others dimmed
+    const card1 = screen.getByTestId("task-card-t1");
+    expect(card1.className).not.toContain("highlightBlocker");
+    expect(card1.className).not.toContain("highlightDependent");
+    expect(card1.className).not.toContain("dimmed");
+
+    expect(screen.getByTestId("task-card-t2").className).toContain("dimmed");
+    expect(screen.getByTestId("task-card-t3").className).toContain("dimmed");
+  });
+
+  it("handles multiple dependencies correctly", () => {
+    mockTasks = makeTasks(4);
+    // t1 and t3 both block t2, and t2 blocks t4
+    mockDependencies = [
+      { id: "dep1", blockerTaskId: "t1", dependentTaskId: "t2" },
+      { id: "dep2", blockerTaskId: "t3", dependentTaskId: "t2" },
+      { id: "dep3", blockerTaskId: "t2", dependentTaskId: "t4" },
+    ];
+    mockCardsPerPage = 10;
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    // Hover t2 — t1 and t3 are blockers, t4 is dependent
+    fireEvent.mouseEnter(screen.getByTestId("task-card-t2"));
+
+    expect(screen.getByTestId("task-card-t1").className).toContain("highlightBlocker");
+    expect(screen.getByTestId("task-card-t3").className).toContain("highlightBlocker");
+    expect(screen.getByTestId("task-card-t4").className).toContain("highlightDependent");
+    // t2 itself: no highlight
+    const card2 = screen.getByTestId("task-card-t2");
+    expect(card2.className).not.toContain("highlightBlocker");
+    expect(card2.className).not.toContain("highlightDependent");
+    expect(card2.className).not.toContain("dimmed");
   });
 });
