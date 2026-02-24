@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Dependency } from "./types";
 import { dependencyCreate, dependencyDelete } from "./task-service";
 import { DependencySearchModal } from "./DependencySearchModal";
+import { Toast } from "./Toast";
 import styles from "./DependencySection.module.css";
 
 interface DependencySectionProps {
@@ -25,14 +26,21 @@ export function DependencySection({
 }: DependencySectionProps) {
   const [showBlockerModal, setShowBlockerModal] = useState(false);
   const [showDependentModal, setShowDependentModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const handleAddBlocker = async (selectedId: string) => {
-    await dependencyCreate(selectedId, taskId);
+    const result = await dependencyCreate(selectedId, taskId);
+    if (result.isCyclic) {
+      setToastMessage("This creates a cycle \u2014 blocking will be disabled for these tasks.");
+    }
     onUpdated();
   };
 
   const handleAddDependent = async (selectedId: string) => {
-    await dependencyCreate(taskId, selectedId);
+    const result = await dependencyCreate(taskId, selectedId);
+    if (result.isCyclic) {
+      setToastMessage("This creates a cycle \u2014 blocking will be disabled for these tasks.");
+    }
     onUpdated();
   };
 
@@ -141,6 +149,10 @@ export function DependencySection({
           onSelect={handleAddDependent}
           onClose={() => setShowDependentModal(false)}
         />
+      )}
+
+      {toastMessage && (
+        <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
       )}
     </div>
   );
