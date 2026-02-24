@@ -124,7 +124,7 @@
 
 **Acceptance Criteria:** Spec §2.2 (cycle toast), §2.6 (cycle warning, resolution), §2.1 (CASCADE delete), §2.3 (cycle indicator disappears on resolution).
 
-- [ ] **Sub-task 1:** Update `DependencySection.tsx` to handle the `isCyclic` flag from `dependencyCreate()`. If `isCyclic === true`, show a warning Toast: "This creates a cycle — blocking will be disabled for these tasks." Write frontend test: creating a dependency that returns `isCyclic: true` shows the cycle warning toast. Run `pnpm test`. **[Agent: general-purpose]**
+- [x] **Sub-task 1:** Update `DependencySection.tsx` to handle the `isCyclic` flag from `dependencyCreate()`. If `isCyclic === true`, show a warning Toast: "This creates a cycle — blocking will be disabled for these tasks." Write frontend test: creating a dependency that returns `isCyclic: true` shows the cycle warning toast. Run `pnpm test`. **[Agent: general-purpose]**
 
 - [ ] **Sub-task 2:** Write Rust tests for edge cases: (a) CASCADE — deleting a task removes all its dependency rows in both directions, (b) cycle resolution — removing a dependency that dissolves an SCC makes `is_cyclic` return to `false` and re-enables blocking, (c) completed blocker satisfies the dependency (blocker marked done → `is_blocked` becomes `false`). Run `cargo test`. **[Agent: general-purpose]**
 

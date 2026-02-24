@@ -226,4 +226,37 @@ describe("DependencySection", () => {
     expect(screen.getByTestId("add-dependent-button")).toBeInTheDocument();
     expect(screen.getByText("Dependencies")).toBeInTheDocument();
   });
+
+  it("shows cycle warning toast when dependencyCreate returns isCyclic: true", async () => {
+    mockedDependencyCreate.mockResolvedValueOnce({
+      edge: { id: "new-dep", blockerTaskId: "t5", dependentTaskId: "t1" },
+      isCyclic: true,
+    });
+    mockedTaskList.mockResolvedValue({
+      tasks: [makeTask("t5", "Candidate")],
+      dependencies: [],
+    });
+    const onUpdated = vi.fn();
+    render(
+      <DependencySection
+        taskId="t1"
+        blockers={[]}
+        dependents={[]}
+        onUpdated={onUpdated}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("add-blocker-button"));
+    });
+
+    await screen.findByTestId("dep-search-list");
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("dep-search-item-t5"));
+    });
+
+    expect(mockedDependencyCreate).toHaveBeenCalledWith("t5", "t1");
+    expect(screen.getByTestId("toast")).toBeInTheDocument();
+    expect(screen.getByText(/blocking will be disabled/)).toBeInTheDocument();
+  });
 });
