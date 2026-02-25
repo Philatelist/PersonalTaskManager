@@ -13,7 +13,7 @@ vi.mock("@xyflow/react", () => {
   const Position = { Top: "top", Bottom: "bottom", Left: "left", Right: "right" };
   const MarkerType = { ArrowClosed: "arrowclosed" };
   return {
-    default: function MockReactFlow(props: {
+    ReactFlow: function MockReactFlow(props: {
       nodes: Array<{ id: string; data: Record<string, unknown> }>;
       edges: Array<{ id: string; source: string; target: string }>;
       nodeTypes: Record<string, React.ComponentType<{ data: Record<string, unknown> }>>;
