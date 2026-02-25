@@ -3891,4 +3891,89 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap().status, "deleted");
     }
+
+    #[test]
+    fn test_cascade_deleting_task_removes_dependency_rows() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "Task A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "Task B".to_string(), None, None, None).unwrap();
+        let c = create_task_impl(&conn, "Task C".to_string(), None, None, None).unwrap();
+
+        // A blocks B, C blocks A
+        let dep1 = create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        let dep2 = create_dependency_impl(&conn, c.id.clone(), a.id.clone()).unwrap();
+
+        // Count deps before
+        let count_before: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM task_dependencies", [], |r| r.get(0),
+        ).unwrap();
+        assert_eq!(count_before, 2);
+
+        // Hard-delete task A via SQL (CASCADE should remove both deps)
+        conn.execute("DELETE FROM tasks WHERE id = ?1", [&a.id]).unwrap();
+
+        let count_after: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM task_dependencies", [], |r| r.get(0),
+        ).unwrap();
+        assert_eq!(count_after, 0);
+    }
+
+    #[test]
+    fn test_cycle_resolution_removing_dep_restores_blocking() {
+        let conn = test_db();
+        let a = create_task_impl(&conn, "Task A".to_string(), None, None, None).unwrap();
+        let b = create_task_impl(&conn, "Task B".to_string(), None, None, None).unwrap();
+
+        // Create cycle: A→B and B→A
+        let dep1 = create_dependency_impl(&conn, a.id.clone(), b.id.clone()).unwrap();
+        let dep2 = create_dependency_impl(&conn, b.id.clone(), a.id.clone()).unwrap();
+
+        // Both are cyclic → marking A as done should be allowed
+        let result_a = list_tasks_impl(&conn, Some("active".to_string()), None).unwrap();
+        let task_a = result_a.tasks.iter().find(|t| t.id == a.id).unwrap();
+        assert!(task_a.is_cyclic);
+
+        // Remove the B→A edge, dissolving the cycle
+        delete_dependency_impl(&conn, dep2.edge.id.clone()).unwrap();
+
+        // Now A→B still exists: B is blocked by A (non-cyclic), A is not cyclic
+        let result_b = list_tasks_impl(&conn, Some("active".to_string()), None).unwrap();
+        let task_a2 = result_b.tasks.iter().find(|t| t.id == a.id).unwrap();
+        let task_b2 = result_b.tasks.iter().find(|t| t.id == b.id).unwrap();
+        assert!(!task_a2.is_cyclic);
+        assert!(!task_b2.is_cyclic);
+        assert!(task_b2.is_blocked);
+
+        // B should NOT be allowed to mark as done (blocked by A)
+        let result = update_task_impl(
+            &conn, b.id.clone(), None, None,
+            Some("done".to_string()), None, None,
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("BlockedByUnsatisfiedDependencies"));
+    }
+
+    #[test]
+    fn test_completed_blocker_satisfies_dependency() {
+        let conn = test_db();
+        let blocker = create_task_impl(&conn, "Blocker".to_string(), None, None, None).unwrap();
+        let dependent = create_task_impl(&conn, "Dependent".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, blocker.id.clone(), dependent.id.clone()).unwrap();
+
+        // Initially dependent is blocked
+        let result1 = list_tasks_impl(&conn, Some("active".to_string()), None).unwrap();
+        let dep_task = result1.tasks.iter().find(|t| t.id == dependent.id).unwrap();
+        assert!(dep_task.is_blocked);
+
+        // Mark blocker as done
+        update_task_impl(
+            &conn, blocker.id.clone(), None, None,
+            Some("done".to_string()), None, None,
+        ).unwrap();
+
+        // Dependent should no longer be blocked
+        let result2 = list_tasks_impl(&conn, Some("active".to_string()), None).unwrap();
+        let dep_task2 = result2.tasks.iter().find(|t| t.id == dependent.id).unwrap();
+        assert!(!dep_task2.is_blocked);
+    }
 }
