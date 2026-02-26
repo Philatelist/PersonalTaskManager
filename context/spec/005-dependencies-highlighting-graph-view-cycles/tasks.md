@@ -2,7 +2,7 @@
 
 - **Functional Spec:** `functional-spec.md`
 - **Technical Spec:** `technical-considerations.md`
-- **Status:** Pending
+- **Status:** Completed
 
 ---
 
@@ -128,9 +128,9 @@
 
 - [x] **Sub-task 2:** Write Rust tests for edge cases: (a) CASCADE — deleting a task removes all its dependency rows in both directions, (b) cycle resolution — removing a dependency that dissolves an SCC makes `is_cyclic` return to `false` and re-enables blocking, (c) completed blocker satisfies the dependency (blocker marked done → `is_blocked` becomes `false`). Run `cargo test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 3:** Write frontend tests for remaining edge cases: (a) dependencies involving deleted tasks show "Deleted task" in grayed-out text in DependencySection, (b) removing a dependency that resolves a cycle causes the cyclic badge to disappear on grid refresh, (c) completing a blocker causes the blocked badge to disappear on grid refresh. Run `pnpm test`. **[Agent: general-purpose]**
+- [x] **Sub-task 3:** Write frontend tests for remaining edge cases: (a) dependencies involving deleted tasks show "Deleted task" in grayed-out text in DependencySection, (b) removing a dependency that resolves a cycle causes the cyclic badge to disappear on grid refresh, (c) completing a blocker causes the blocked badge to disappear on grid refresh. Run `pnpm test`. **[Agent: general-purpose]**
 
-- [ ] **Sub-task 4: Final Verify** — Run full test suite (`cargo test` + `pnpm test`). Walk through all acceptance criteria from functional-spec.md §2.1–§2.6 and confirm each is covered by at least one test. Update this tasks.md to mark all checkboxes complete. **[Agent: general-purpose]**
+- [x] **Sub-task 4: Final Verify** — Run full test suite (`cargo test` + `pnpm test`). Walk through all acceptance criteria from functional-spec.md §2.1–§2.6 and confirm each is covered by at least one test. Update this tasks.md to mark all checkboxes complete. **[Agent: general-purpose]**
 
 ---
 

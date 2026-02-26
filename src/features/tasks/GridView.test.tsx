@@ -694,3 +694,66 @@ describe("GridView graph view button", () => {
     expect(screen.queryByTestId("graph-view-overlay")).not.toBeInTheDocument();
   });
 });
+
+describe("GridView dependency badge edge cases", () => {
+  it("cyclic badge disappears when cycle is resolved on refresh", () => {
+    mockTasks = makeTasks(2);
+    mockTasks[0].isCyclic = true;
+    mockTasks[1].isCyclic = true;
+    mockCardsPerPage = 10;
+    const { rerender } = render(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.getByTestId("cyclic-badge-t1")).toBeInTheDocument();
+    expect(screen.getByTestId("cyclic-badge-t2")).toBeInTheDocument();
+
+    // Simulate refresh after removing the dependency that caused the cycle
+    mockTasks = makeTasks(2);
+    mockTasks[0].isCyclic = false;
+    mockTasks[1].isCyclic = false;
+    rerender(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.queryByTestId("cyclic-badge-t1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("cyclic-badge-t2")).not.toBeInTheDocument();
+  });
+
+  it("blocked badge disappears when blocker is completed on refresh", () => {
+    mockTasks = makeTasks(2);
+    mockTasks[1].isBlocked = true;
+    mockTasks[1].unsatisfiedBlockerNames = ["Task 1"];
+    mockCardsPerPage = 10;
+    const { rerender } = render(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.getByTestId("blocked-badge-t2")).toBeInTheDocument();
+
+    // Simulate refresh after blocker (t1) was marked done
+    mockTasks = makeTasks(2);
+    mockTasks[0].status = "done";
+    mockTasks[1].isBlocked = false;
+    mockTasks[1].unsatisfiedBlockerNames = [];
+    rerender(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.queryByTestId("blocked-badge-t2")).not.toBeInTheDocument();
+  });
+
+  it("both badges update correctly when cycle is resolved and blocker completes", () => {
+    mockTasks = makeTasks(3);
+    mockTasks[0].isCyclic = true;
+    mockTasks[1].isCyclic = true;
+    mockTasks[2].isBlocked = true;
+    mockTasks[2].unsatisfiedBlockerNames = ["Task 1"];
+    mockCardsPerPage = 10;
+    const { rerender } = render(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.getByTestId("cyclic-badge-t1")).toBeInTheDocument();
+    expect(screen.getByTestId("cyclic-badge-t2")).toBeInTheDocument();
+    expect(screen.getByTestId("blocked-badge-t3")).toBeInTheDocument();
+
+    // Simulate refresh: cycle resolved, blocker completed
+    mockTasks = makeTasks(3);
+    rerender(<GridView onSelectTask={vi.fn()} />);
+
+    expect(screen.queryByTestId("cyclic-badge-t1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("cyclic-badge-t2")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("blocked-badge-t3")).not.toBeInTheDocument();
+  });
+});
