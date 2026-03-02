@@ -56,8 +56,10 @@
   gap: 4px;
 }
 
-.overdueIcon {
-  color: #d32f2f;
+.overdueText {
+  color: #b71c1c;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .indicator {
