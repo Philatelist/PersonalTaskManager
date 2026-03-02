@@ -97,7 +97,7 @@
   - If overdue, append after the date text:
     `<span className={styles.overdueText} data-testid="detail-overdue-text">{formatOverdueText(urgency.daysRemaining)}</span>`
   - Keep the existing `.overdue` class on the date text for overdue color
-- [ ] Modify `src/features/tasks/DueDatePicker.module.css`: **[Agent: general-purpose]**
+- [x] Modify `src/features/tasks/DueDatePicker.module.css`: **[Agent: general-purpose]**
   - Add `.urgencyDot`: `width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle;`
   - Add `.overdueText`: `color: #b71c1c; font-size: 0.75rem; font-weight: 600; margin-left: 4px;`
 - [ ] Modify `src/features/tasks/TaskDetailView.tsx`: **[Agent: general-purpose]**
