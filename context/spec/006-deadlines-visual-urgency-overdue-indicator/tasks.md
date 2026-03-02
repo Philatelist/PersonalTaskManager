@@ -63,7 +63,7 @@
   - On the card root `<div>`: if `urgency` is not null, set `style={{ borderLeft: \`4px solid ${urgency.color}\` }}`
   - In the due date section: remove the `⚠` overdue icon (`<span className={styles.overdueIcon}>⚠</span>`)
   - If urgency is not null and `formatOverdueText(urgency.daysRemaining)` returns a string, render: `<span className={styles.overdueText} data-testid="overdue-text">{text}</span>`
-- [ ] Modify `src/features/tasks/TaskCard.module.css`: **[Agent: general-purpose]**
+- [x] Modify `src/features/tasks/TaskCard.module.css`: **[Agent: general-purpose]**
   - Remove `.overdueIcon` class
   - Add `.overdueText` class: `color: #b71c1c; font-size: 10px; font-weight: 600;`
 - [ ] Modify `src/features/tasks/TaskCard.test.tsx` — add/update tests: **[Agent: general-purpose]**
