@@ -3,6 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { TaskWithProgress } from "./use-tasks";
 import { ProgressRing } from "./ProgressRing";
 import { taskUpdate } from "./task-service";
+import { getUrgency, formatOverdueText } from "./urgency";
 import styles from "./TaskCard.module.css";
 
 export type HighlightState = "blocker" | "dependent" | "dimmed" | null | undefined;
@@ -23,13 +24,6 @@ function formatShortDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function isOverdue(dateStr: string): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dateStr + "T00:00:00");
-  return due < today;
-}
-
 export function TaskCard({ globalIndex, task, onSelect, onUpdated, onContextMenu: onContextMenuProp, highlightState, onMouseEnter, onMouseLeave }: TaskCardProps) {
   const {
     attributes,
@@ -40,9 +34,13 @@ export function TaskCard({ globalIndex, task, onSelect, onUpdated, onContextMenu
     isDragging,
   } = useSortable({ id: task.id });
 
-  const style = {
+  const urgency = getUrgency(task.dueDate, task.status);
+  const overdueText = urgency ? formatOverdueText(urgency.daysRemaining) : null;
+
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition: transition ?? undefined,
+    ...(urgency ? { borderLeft: `4px solid ${urgency.color}` } : {}),
   };
 
   const handleCheckbox = async (e: React.MouseEvent) => {
@@ -119,8 +117,8 @@ export function TaskCard({ globalIndex, task, onSelect, onUpdated, onContextMenu
           {task.dueDate && (
             <>
               <span>{formatShortDate(task.dueDate)}</span>
-              {isOverdue(task.dueDate) && (
-                <span className={styles.overdueIcon} data-testid="overdue-icon">⚠</span>
+              {overdueText && (
+                <span className={styles.overdueText} data-testid="overdue-text">{overdueText}</span>
               )}
             </>
           )}

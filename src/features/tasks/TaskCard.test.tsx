@@ -105,7 +105,7 @@ describe("TaskCard", () => {
     expect(screen.getByText("Feb 15")).toBeInTheDocument();
   });
 
-  it("shows overdue icon for past due date", () => {
+  it("shows overdue text for past due date", () => {
     render(
       <TaskCard
         globalIndex={1}
@@ -113,10 +113,11 @@ describe("TaskCard", () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.getByTestId("overdue-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("overdue-text")).toBeInTheDocument();
+    expect(screen.queryByTestId("overdue-icon")).not.toBeInTheDocument();
   });
 
-  it("does not show overdue icon for future due date", () => {
+  it("does not show overdue text for future due date", () => {
     render(
       <TaskCard
         globalIndex={1}
@@ -124,6 +125,7 @@ describe("TaskCard", () => {
         onSelect={vi.fn()}
       />,
     );
+    expect(screen.queryByTestId("overdue-text")).not.toBeInTheDocument();
     expect(screen.queryByTestId("overdue-icon")).not.toBeInTheDocument();
   });
 
