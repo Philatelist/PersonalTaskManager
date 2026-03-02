@@ -277,4 +277,87 @@ describe("TaskCard", () => {
     expect(card.className).not.toContain("highlightDependent");
     expect(card.className).not.toContain("dimmed");
   });
+
+  // --- Urgency border stripe + overdue text tests ---
+
+  function daysFromNow(offset: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  it("shows green left border for due date > 3 days away", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: daysFromNow(10) })} onSelect={vi.fn()} />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.style.borderLeft).toContain("4px solid");
+    expect(card.style.borderLeft).toContain("76, 175, 80"); // #4caf50
+    expect(screen.queryByTestId("overdue-text")).not.toBeInTheDocument();
+  });
+
+  it("shows amber left border for due date 2 days away", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: daysFromNow(2) })} onSelect={vi.fn()} />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.style.borderLeft).toContain("4px solid");
+    expect(card.style.borderLeft).toContain("255, 152, 0"); // #ff9800
+    expect(screen.queryByTestId("overdue-text")).not.toBeInTheDocument();
+  });
+
+  it("shows red left border for due date today, no overdue text", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: daysFromNow(0) })} onSelect={vi.fn()} />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.style.borderLeft).toContain("4px solid");
+    expect(card.style.borderLeft).toContain("211, 47, 47"); // #d32f2f
+    expect(screen.queryByTestId("overdue-text")).not.toBeInTheDocument();
+  });
+
+  it("shows dark red left border and '+3 days' for overdue by 3 days", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: daysFromNow(-3) })} onSelect={vi.fn()} />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.style.borderLeft).toContain("4px solid");
+    expect(card.style.borderLeft).toContain("183, 28, 28"); // #b71c1c
+    expect(screen.getByTestId("overdue-text")).toHaveTextContent("+3 days");
+  });
+
+  it("shows '+1 day' singular for overdue by 1 day", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: daysFromNow(-1) })} onSelect={vi.fn()} />,
+    );
+    expect(screen.getByTestId("overdue-text")).toHaveTextContent("+1 day");
+  });
+
+  it("shows no left border stripe when dueDate is null", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: null })} onSelect={vi.fn()} />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.style.borderLeft).toBe("");
+    expect(screen.queryByTestId("overdue-text")).not.toBeInTheDocument();
+  });
+
+  it("shows no urgency for done task with overdue date", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: daysFromNow(-5), status: "done" })} onSelect={vi.fn()} />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.style.borderLeft).toBe("");
+    expect(screen.queryByTestId("overdue-text")).not.toBeInTheDocument();
+  });
+
+  it("does not render the old overdue icon", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: daysFromNow(-5) })} onSelect={vi.fn()} />,
+    );
+    expect(screen.queryByTestId("overdue-icon")).not.toBeInTheDocument();
+  });
 });

@@ -66,7 +66,7 @@
 - [x] Modify `src/features/tasks/TaskCard.module.css`: **[Agent: general-purpose]**
   - Remove `.overdueIcon` class
   - Add `.overdueText` class: `color: #b71c1c; font-size: 10px; font-weight: 600;`
-- [ ] Modify `src/features/tasks/TaskCard.test.tsx` — add/update tests: **[Agent: general-purpose]**
+- [x] Modify `src/features/tasks/TaskCard.test.tsx` — add/update tests: **[Agent: general-purpose]**
   - Card with due date > 3 days away → has green (`#4caf50`) left border inline style
   - Card with due date 2 days away → has amber (`#ff9800`) left border
   - Card due today → has red (`#d32f2f`) left border, no overdue text
