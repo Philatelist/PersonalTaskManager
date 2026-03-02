@@ -76,8 +76,8 @@
   - Done card with overdue date → no inline border-left style, no overdue text
   - Regression: overdue icon (⚠ / `data-testid="overdue-icon"`) is no longer rendered
   - Ensure existing TaskCard tests still pass (title, tags, progress, context menu, etc.)
-- [ ] **Verify:** Run `npx vitest run src/features/tasks/TaskCard.test.tsx` — all tests pass. **[Agent: general-purpose]**
-- [ ] **Verify:** Run `npx vitest run` — full suite passes (no regressions). **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run src/features/tasks/TaskCard.test.tsx` — all tests pass. **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run` — full suite passes (no regressions). **[Agent: general-purpose]**
 
 ---
 
