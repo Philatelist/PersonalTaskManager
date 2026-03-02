@@ -100,7 +100,7 @@
 - [x] Modify `src/features/tasks/DueDatePicker.module.css`: **[Agent: general-purpose]**
   - Add `.urgencyDot`: `width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle;`
   - Add `.overdueText`: `color: #b71c1c; font-size: 0.75rem; font-weight: 600; margin-left: 4px;`
-- [ ] Modify `src/features/tasks/TaskDetailView.tsx`: **[Agent: general-purpose]**
+- [x] Modify `src/features/tasks/TaskDetailView.tsx`: **[Agent: general-purpose]**
   - Pass `status={task.status}` prop to the `<DueDatePicker>` component
 - [ ] Modify `src/features/tasks/DueDatePicker.test.tsx` — add tests: **[Agent: general-purpose]**
   - Due date 5 days away → urgency dot visible with green background

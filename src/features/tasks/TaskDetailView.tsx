@@ -292,6 +292,7 @@ export function TaskDetailView({
         <DueDatePicker
           dueDate={task.dueDate}
           onChange={handleDueDateChange}
+          status={task.status}
         />
       </div>
 
