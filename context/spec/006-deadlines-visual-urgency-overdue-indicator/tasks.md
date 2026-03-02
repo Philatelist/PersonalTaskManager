@@ -13,7 +13,7 @@
 >
 > **Acceptance Criteria:** §2.1 (tier computation logic)
 
-- [ ] Create `src/features/tasks/urgency.ts` with: **[Agent: general-purpose]**
+- [x] Create `src/features/tasks/urgency.ts` with: **[Agent: general-purpose]**
   - `UrgencyTier` type: `"comfortable" | "approaching" | "urgent" | "overdue"`
   - `UrgencyInfo` interface: `{ tier: UrgencyTier; daysRemaining: number; color: string }`
   - `URGENCY_COLORS` constant: comfortable → `#4caf50`, approaching → `#ff9800`, urgent → `#d32f2f`, overdue → `#b71c1c`
@@ -27,7 +27,7 @@
     - Returns `null` if `daysRemaining >= 0`
     - Returns `"+1 day"` if `daysRemaining === -1`
     - Returns `"+X days"` otherwise (using `Math.abs`)
-- [ ] Create `src/features/tasks/urgency.test.ts` with tests: **[Agent: general-purpose]**
+- [x] Create `src/features/tasks/urgency.test.ts` with tests: **[Agent: general-purpose]**
   - `getUrgency` tests (use fixed `today` param to avoid flaky tests):
     - Due date 10 days from now → tier `"comfortable"`, color `#4caf50`, daysRemaining `10`
     - Due date 4 days from now → tier `"comfortable"`
@@ -46,7 +46,7 @@
     - `daysRemaining = -30` → `"+30 days"`
     - `daysRemaining = 0` → `null`
     - `daysRemaining = 3` → `null`
-- [ ] **Verify:** Run `npx vitest run src/features/tasks/urgency.test.ts` — all tests pass. **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run src/features/tasks/urgency.test.ts` — all tests pass. **[Agent: general-purpose]**
 
 ---
 
