@@ -56,7 +56,7 @@
 >
 > **Acceptance Criteria:** §2.2 (left border stripe), §2.3 (overdue text indicator)
 
-- [ ] Modify `src/features/tasks/TaskCard.tsx`: **[Agent: general-purpose]**
+- [x] Modify `src/features/tasks/TaskCard.tsx`: **[Agent: general-purpose]**
   - Import `getUrgency`, `formatOverdueText` from `./urgency`
   - Remove the local `isOverdue()` helper function
   - Call `const urgency = getUrgency(task.dueDate, task.status)` at render time
