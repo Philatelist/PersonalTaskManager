@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { getUrgency, formatOverdueText } from "./urgency";
 import styles from "./DueDatePicker.module.css";
 
 interface DueDatePickerProps {
   dueDate: string | null;
   onChange: (date: string | null) => void;
+  status?: string;
 }
 
 function formatDate(dateStr: string): string {
@@ -15,15 +17,10 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function isOverdue(dateStr: string): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dateStr + "T00:00:00");
-  return due < today;
-}
-
-export function DueDatePicker({ dueDate, onChange }: DueDatePickerProps) {
+export function DueDatePicker({ dueDate, onChange, status }: DueDatePickerProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const urgency = getUrgency(dueDate, status ?? "active");
+  const overdueText = urgency ? formatOverdueText(urgency.daysRemaining) : null;
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -67,13 +64,25 @@ export function DueDatePicker({ dueDate, onChange }: DueDatePickerProps) {
 
   return (
     <div className={styles.container} data-testid="due-date-picker">
+      {urgency && (
+        <span
+          className={styles.urgencyDot}
+          style={{ backgroundColor: urgency.color }}
+          data-testid="urgency-dot"
+        />
+      )}
       <button
-        className={`${styles.display} ${dueDate && isOverdue(dueDate) ? styles.overdue : ""} ${!dueDate ? styles.placeholder : ""}`}
+        className={`${styles.display} ${urgency?.tier === "overdue" ? styles.overdue : ""} ${!dueDate ? styles.placeholder : ""}`}
         onClick={() => setIsEditing(true)}
         data-testid="due-date-display"
       >
         {dueDate ? formatDate(dueDate) : "No due date"}
       </button>
+      {overdueText && (
+        <span className={styles.overdueText} data-testid="detail-overdue-text">
+          {overdueText}
+        </span>
+      )}
     </div>
   );
 }

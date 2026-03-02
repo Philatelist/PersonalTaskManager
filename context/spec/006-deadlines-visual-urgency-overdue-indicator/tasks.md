@@ -87,7 +87,7 @@
 >
 > **Acceptance Criteria:** §2.4 (task detail view urgency indicator)
 
-- [ ] Modify `src/features/tasks/DueDatePicker.tsx`: **[Agent: general-purpose]**
+- [x] Modify `src/features/tasks/DueDatePicker.tsx`: **[Agent: general-purpose]**
   - Add optional `status?: string` prop (defaults to `"active"`)
   - Import `getUrgency`, `formatOverdueText` from `./urgency`
   - Remove the local `isOverdue()` helper function
