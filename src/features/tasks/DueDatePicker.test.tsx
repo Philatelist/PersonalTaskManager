@@ -57,4 +57,58 @@ describe("DueDatePicker", () => {
     fireEvent.click(screen.getByTestId("due-date-display"));
     expect(screen.queryByTestId("due-date-clear")).not.toBeInTheDocument();
   });
+
+  // --- Urgency dot + overdue text tests ---
+
+  function daysFromNow(offset: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  it("shows urgency dot with green background for due date 5 days away", () => {
+    render(<DueDatePicker dueDate={daysFromNow(5)} onChange={vi.fn()} />);
+    const dot = screen.getByTestId("urgency-dot");
+    expect(dot).toBeInTheDocument();
+    expect(dot.style.backgroundColor).toContain("76, 175, 80"); // #4caf50
+  });
+
+  it("shows urgency dot with amber background for due date 2 days away", () => {
+    render(<DueDatePicker dueDate={daysFromNow(2)} onChange={vi.fn()} />);
+    const dot = screen.getByTestId("urgency-dot");
+    expect(dot.style.backgroundColor).toContain("255, 152, 0"); // #ff9800
+  });
+
+  it("shows urgency dot with red background for due date today", () => {
+    render(<DueDatePicker dueDate={daysFromNow(0)} onChange={vi.fn()} />);
+    const dot = screen.getByTestId("urgency-dot");
+    expect(dot.style.backgroundColor).toContain("211, 47, 47"); // #d32f2f
+  });
+
+  it("shows urgency dot (dark red) and '+3 days' text for overdue by 3 days", () => {
+    render(<DueDatePicker dueDate={daysFromNow(-3)} onChange={vi.fn()} />);
+    const dot = screen.getByTestId("urgency-dot");
+    expect(dot.style.backgroundColor).toContain("183, 28, 28"); // #b71c1c
+    expect(screen.getByTestId("detail-overdue-text")).toHaveTextContent("+3 days");
+  });
+
+  it("shows '+1 day' singular for overdue by 1 day", () => {
+    render(<DueDatePicker dueDate={daysFromNow(-1)} onChange={vi.fn()} />);
+    expect(screen.getByTestId("detail-overdue-text")).toHaveTextContent("+1 day");
+  });
+
+  it("shows no urgency dot when dueDate is null", () => {
+    render(<DueDatePicker dueDate={null} onChange={vi.fn()} />);
+    expect(screen.queryByTestId("urgency-dot")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("detail-overdue-text")).not.toBeInTheDocument();
+  });
+
+  it("shows no urgency dot when status is done with overdue date", () => {
+    render(<DueDatePicker dueDate={daysFromNow(-5)} onChange={vi.fn()} status="done" />);
+    expect(screen.queryByTestId("urgency-dot")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("detail-overdue-text")).not.toBeInTheDocument();
+  });
 });
