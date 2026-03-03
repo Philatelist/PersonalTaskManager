@@ -14,7 +14,7 @@
 > **Acceptance Criteria:** Tech §2.2.2, §2.2.3, §2.2.4, §2.2.5
 
 - [x] Modify `task_list_impl` in `src-tauri/src/commands.rs`: when `status_filter = "archive"`, query `WHERE status IN ('done', 'deleted') ORDER BY updated_at DESC`. All other filter values continue to work as before. **[Agent: general-purpose]**
-- [ ] Fix `is_blocked` logic in `src-tauri/src/commands.rs` (or `db.rs`): a blocker is *unsatisfied* only if `status = 'active'`. Both `'done'` and `'deleted'` blockers are treated as non-blocking. Update `unsatisfied_blocker_names` accordingly. **[Agent: general-purpose]**
+- [x] Fix `is_blocked` logic in `src-tauri/src/commands.rs` (or `db.rs`): a blocker is *unsatisfied* only if `status = 'active'`. Both `'done'` and `'deleted'` blockers are treated as non-blocking. Update `unsatisfied_blocker_names` accordingly. **[Agent: general-purpose]**
 - [ ] Add `status: String` field to the dependency DTO struct in `src-tauri/src/models.rs` (the struct used for `blockers` / `dependents` entries inside `TaskDto`). Populate it from the SQL query that joins `task_dependencies` with `tasks`. **[Agent: general-purpose]**
 - [ ] Fix progress computation: a taskref subtask counts as complete only if `ref_task.status = 'done'`; `'deleted'` counts as incomplete. **[Agent: general-purpose]**
 - [ ] Add Rust tests in `src-tauri/src/commands.rs` (using `test_db()` helper): **[Agent: general-purpose]**

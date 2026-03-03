@@ -1125,7 +1125,7 @@ fn compute_dependency_flags(
                 );
 
                 if let Ok((blocker_status, blocker_title)) = blocker_info {
-                    if blocker_status != "done" {
+                    if blocker_status == "active" {
                         unsatisfied_names.push(blocker_title);
                     }
                 }
