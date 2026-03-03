@@ -125,7 +125,7 @@
   - Task due today: red border, NO "+0 days" text (§2.3 AC: "A task due today does NOT show +0 days")
   - Task status changes from active to done: urgency indicators disappear (mock status change + re-render)
   - Task with status `"deleted"` and overdue date: no urgency indicators (treated same as done)
-- [ ] Add edge-case tests to `src/features/tasks/DueDatePicker.test.tsx`: **[Agent: general-purpose]**
+- [x] Add edge-case tests to `src/features/tasks/DueDatePicker.test.tsx`: **[Agent: general-purpose]**
   - Due date cleared (set to null): urgency dot disappears
   - Due date changed from overdue to future: tier updates from overdue to comfortable
   - Status changed from done to active with overdue date: urgency reappears

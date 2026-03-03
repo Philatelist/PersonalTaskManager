@@ -111,4 +111,35 @@ describe("DueDatePicker", () => {
     expect(screen.queryByTestId("urgency-dot")).not.toBeInTheDocument();
     expect(screen.queryByTestId("detail-overdue-text")).not.toBeInTheDocument();
   });
+
+  // --- Slice 4 edge cases ---
+
+  it("urgency dot disappears when due date is cleared to null", () => {
+    const { rerender } = render(<DueDatePicker dueDate={daysFromNow(-3)} onChange={vi.fn()} />);
+    expect(screen.getByTestId("urgency-dot")).toBeInTheDocument();
+
+    rerender(<DueDatePicker dueDate={null} onChange={vi.fn()} />);
+    expect(screen.queryByTestId("urgency-dot")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("detail-overdue-text")).not.toBeInTheDocument();
+  });
+
+  it("tier updates from overdue to comfortable when due date changes to future", () => {
+    const { rerender } = render(<DueDatePicker dueDate={daysFromNow(-3)} onChange={vi.fn()} />);
+    expect(screen.getByTestId("urgency-dot").style.backgroundColor).toContain("183, 28, 28"); // #b71c1c
+
+    rerender(<DueDatePicker dueDate={daysFromNow(10)} onChange={vi.fn()} />);
+    expect(screen.getByTestId("urgency-dot").style.backgroundColor).toContain("76, 175, 80"); // #4caf50
+    expect(screen.queryByTestId("detail-overdue-text")).not.toBeInTheDocument();
+  });
+
+  it("urgency reappears when status changes from done to active with overdue date", () => {
+    const { rerender } = render(
+      <DueDatePicker dueDate={daysFromNow(-5)} onChange={vi.fn()} status="done" />,
+    );
+    expect(screen.queryByTestId("urgency-dot")).not.toBeInTheDocument();
+
+    rerender(<DueDatePicker dueDate={daysFromNow(-5)} onChange={vi.fn()} status="active" />);
+    expect(screen.getByTestId("urgency-dot")).toBeInTheDocument();
+    expect(screen.getByTestId("detail-overdue-text")).toHaveTextContent("+5 days");
+  });
 });
