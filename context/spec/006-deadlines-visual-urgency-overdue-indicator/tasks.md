@@ -121,7 +121,7 @@
 >
 > **Acceptance Criteria:** §2.5 (edge cases), §2.1 (done-task suppression)
 
-- [ ] Add edge-case tests to `src/features/tasks/TaskCard.test.tsx`: **[Agent: general-purpose]**
+- [x] Add edge-case tests to `src/features/tasks/TaskCard.test.tsx`: **[Agent: general-purpose]**
   - Task due today: red border, NO "+0 days" text (§2.3 AC: "A task due today does NOT show +0 days")
   - Task status changes from active to done: urgency indicators disappear (mock status change + re-render)
   - Task with status `"deleted"` and overdue date: no urgency indicators (treated same as done)

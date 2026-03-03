@@ -360,4 +360,30 @@ describe("TaskCard", () => {
     );
     expect(screen.queryByTestId("overdue-icon")).not.toBeInTheDocument();
   });
+
+  // --- Slice 4 edge cases ---
+
+  it("urgency indicators disappear when status changes from active to done", () => {
+    const { rerender } = render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: daysFromNow(-3), status: "active" })} onSelect={vi.fn()} />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.style.borderLeft).toContain("183, 28, 28"); // overdue color present
+    expect(screen.getByTestId("overdue-text")).toBeInTheDocument();
+
+    rerender(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: daysFromNow(-3), status: "done" })} onSelect={vi.fn()} />,
+    );
+    expect(card.style.borderLeft).toBe("");
+    expect(screen.queryByTestId("overdue-text")).not.toBeInTheDocument();
+  });
+
+  it("shows no urgency indicators for deleted task with overdue date", () => {
+    render(
+      <TaskCard globalIndex={1} task={makeTask({ dueDate: daysFromNow(-5), status: "deleted" })} onSelect={vi.fn()} />,
+    );
+    const card = screen.getByTestId("task-card-t1");
+    expect(card.style.borderLeft).toBe("");
+    expect(screen.queryByTestId("overdue-text")).not.toBeInTheDocument();
+  });
 });

@@ -19,7 +19,7 @@ export function getUrgency(
   today?: Date,
 ): UrgencyInfo | null {
   if (dueDate == null) return null;
-  if (status === "done") return null;
+  if (status === "done" || status === "deleted") return null;
 
   const dueMs = new Date(dueDate + "T00:00:00").getTime();
   if (isNaN(dueMs)) return null;
