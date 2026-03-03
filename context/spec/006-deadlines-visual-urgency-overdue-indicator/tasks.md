@@ -130,7 +130,7 @@
   - Due date changed from overdue to future: tier updates from overdue to comfortable
   - Status changed from done to active with overdue date: urgency reappears
 - [x] **Verify:** Run `npx vitest run` — full test suite passes. **[Agent: general-purpose]**
-- [ ] **Verify:** Run `/Users/alex/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml` — all Rust tests still pass (no backend changes, regression check). **[Agent: general-purpose]**
+- [x] **Verify:** Run `/Users/alex/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml` — all Rust tests still pass (no backend changes, regression check). **[Agent: general-purpose]**
 
 ---
 
