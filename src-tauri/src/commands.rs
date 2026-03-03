@@ -251,7 +251,7 @@ pub fn update_task_impl(
             let sccs = compute_sccs(conn)?;
             let unsatisfied: Vec<String> = blockers
                 .iter()
-                .filter(|b| b.task_status != "done")
+                .filter(|b| b.task_status == "active")
                 .filter(|b| !is_in_same_scc(&sccs, &id, &b.task_id))
                 .map(|b| b.task_title.clone())
                 .collect();
@@ -891,7 +891,7 @@ pub fn get_task_impl(conn: &Connection, id: String) -> Result<TaskDto, String> {
         if is_in_same_scc(&sccs, &task.id, &blocker.task_id) {
             continue; // cyclic blocker — doesn't count
         }
-        if blocker.task_status != "done" {
+        if blocker.task_status == "active" {
             unsatisfied_names.push(blocker.task_title.clone());
         }
     }
