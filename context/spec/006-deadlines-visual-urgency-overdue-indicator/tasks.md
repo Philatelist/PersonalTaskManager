@@ -110,8 +110,8 @@
   - Due date 1 day ago → "+1 day" text (singular)
   - No due date → no urgency dot, no overdue text
   - Status `"done"` with overdue date → no urgency dot, no overdue text
-- [ ] **Verify:** Run `npx vitest run src/features/tasks/DueDatePicker.test.tsx` — all tests pass. **[Agent: general-purpose]**
-- [ ] **Verify:** Run `npx vitest run` — full suite passes (no regressions). **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run src/features/tasks/DueDatePicker.test.tsx` — all tests pass. **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run` — full suite passes (no regressions). **[Agent: general-purpose]**
 
 ---
 
