@@ -975,8 +975,27 @@ pub fn list_tasks_impl(
     tag_filter: Option<String>,
 ) -> Result<TaskListResult, String> {
     let status = status_filter.unwrap_or_else(|| "active".to_string());
+    let is_archive = status == "archive";
 
-    let (sql, params): (String, Vec<Box<dyn rusqlite::types::ToSql>>) = if let Some(ref tag) = tag_filter {
+    let (sql, params): (String, Vec<Box<dyn rusqlite::types::ToSql>>) = if is_archive {
+        if let Some(ref tag) = tag_filter {
+            (
+                "SELECT DISTINCT t.id, t.title, t.description, t.priority_rank, t.status, t.due_date, t.created_at, t.updated_at
+                 FROM tasks t
+                 INNER JOIN task_tags tt ON t.id = tt.task_id
+                 WHERE t.status IN ('done', 'deleted') AND tt.tag = ?
+                 ORDER BY t.updated_at DESC".to_string(),
+                vec![Box::new(tag.clone()) as Box<dyn rusqlite::types::ToSql>],
+            )
+        } else {
+            (
+                "SELECT id, title, description, priority_rank, status, due_date, created_at, updated_at
+                 FROM tasks WHERE status IN ('done', 'deleted')
+                 ORDER BY updated_at DESC".to_string(),
+                vec![],
+            )
+        }
+    } else if let Some(ref tag) = tag_filter {
         (
             "SELECT DISTINCT t.id, t.title, t.description, t.priority_rank, t.status, t.due_date, t.created_at, t.updated_at
              FROM tasks t
@@ -1022,6 +1041,7 @@ pub fn list_tasks_impl(
 
     for task in &mut tasks {
         task.tags = get_tags_for_task(conn, &task.id)?;
+        task.subtasks = get_subtasks_for_task(conn, &task.id)?;
     }
 
     // Bulk-fetch all dependency edges.
