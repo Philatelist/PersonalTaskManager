@@ -36,12 +36,12 @@
 >
 > **Acceptance Criteria:** Tech §2.2.1, §2.3.1; Functional §2.4
 
-- [ ] Implement `task_permanent_delete_impl(conn, id)` in `src-tauri/src/commands.rs`: **[Agent: general-purpose]**
+- [x] Implement `task_permanent_delete_impl(conn, id)` in `src-tauri/src/commands.rs`: **[Agent: general-purpose]**
   - Guard: return error if `status NOT IN ('done', 'deleted')`.
   - Step 1: `DELETE FROM subtasks WHERE ref_task_id = ?` (cleans taskref refs in other tasks).
   - Step 2: `DELETE FROM tasks WHERE id = ?` (CASCADE handles tags, own subtasks, dep rows).
   - Both steps run in a single transaction.
-- [ ] Add `#[tauri::command] task_permanent_delete(...)` wrapper and register it in `src-tauri/src/main.rs` (`.invoke_handler`). **[Agent: general-purpose]**
+- [x] Add `#[tauri::command] task_permanent_delete(...)` wrapper and register it in `src-tauri/src/main.rs` (`.invoke_handler`). **[Agent: general-purpose]**
 - [ ] Add Rust tests for `task_permanent_delete_impl`: **[Agent: general-purpose]**
   - Permanently deletes a `done` task — row removed from `tasks`.
   - Permanently deletes a `deleted` task — row removed.

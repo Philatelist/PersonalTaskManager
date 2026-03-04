@@ -407,6 +407,65 @@ pub fn task_delete(id: String, state: tauri::State<'_, crate::DbState>, backup_s
     delete_task_impl(&conn, id)
 }
 
+/// Core implementation of permanent (hard) delete for archived tasks.
+///
+/// Only tasks with status 'done' or 'deleted' may be permanently deleted.
+/// Runs in a single transaction:
+///   1. Delete taskref subtask rows in other tasks pointing to this task.
+///   2. Delete the task itself (CASCADE removes its own subtasks, tags, dep rows).
+pub fn task_permanent_delete_impl(conn: &Connection, id: String) -> Result<(), String> {
+    // Guard: task must exist and be archived.
+    let status: String = conn
+        .query_row(
+            "SELECT status FROM tasks WHERE id = ?1",
+            rusqlite::params![id],
+            |row| row.get(0),
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => "Task not found".to_string(),
+            other => other.to_string(),
+        })?;
+
+    if status != "done" && status != "deleted" {
+        return Err(format!(
+            "Cannot permanently delete task with status '{}': only 'done' or 'deleted' tasks may be permanently deleted",
+            status
+        ));
+    }
+
+    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+
+    // Step 1: Remove taskref subtask entries in other tasks that reference this task.
+    tx.execute(
+        "DELETE FROM subtasks WHERE ref_task_id = ?1",
+        rusqlite::params![id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    // Step 2: Hard-delete the task (CASCADE handles its own subtasks, tags, dep rows).
+    let rows = tx
+        .execute("DELETE FROM tasks WHERE id = ?1", rusqlite::params![id])
+        .map_err(|e| e.to_string())?;
+
+    if rows == 0 {
+        return Err("Task not found".to_string());
+    }
+
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn task_permanent_delete(
+    id: String,
+    state: tauri::State<'_, crate::DbState>,
+    backup_state: tauri::State<'_, crate::BackupState>,
+) -> Result<(), String> {
+    backup_state.maybe_backup();
+    let conn = state.0.lock().unwrap();
+    task_permanent_delete_impl(&conn, id)
+}
+
 /// Core implementation of task reordering.
 ///
 /// Moves a task to a new position by computing a new `priority_rank` via
