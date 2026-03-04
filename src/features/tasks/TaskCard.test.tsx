@@ -387,3 +387,40 @@ describe("TaskCard", () => {
     expect(screen.queryByTestId("overdue-text")).not.toBeInTheDocument();
   });
 });
+
+describe("TaskCard archive badges and drag handle", () => {
+  it("done card renders 'Completed' badge and no 'Deleted' badge", () => {
+    render(<TaskCard globalIndex={1} task={makeTask({ status: "done" })} onSelect={vi.fn()} />);
+    expect(screen.getByTestId("badge-completed")).toBeInTheDocument();
+    expect(screen.getByTestId("badge-completed")).toHaveTextContent("Completed");
+    expect(screen.queryByTestId("badge-deleted")).not.toBeInTheDocument();
+  });
+
+  it("deleted card renders 'Deleted' badge and no 'Completed' badge", () => {
+    render(<TaskCard globalIndex={1} task={makeTask({ status: "deleted" })} onSelect={vi.fn()} />);
+    expect(screen.getByTestId("badge-deleted")).toBeInTheDocument();
+    expect(screen.getByTestId("badge-deleted")).toHaveTextContent("Deleted");
+    expect(screen.queryByTestId("badge-completed")).not.toBeInTheDocument();
+  });
+
+  it("active card renders neither badge", () => {
+    render(<TaskCard globalIndex={1} task={makeTask({ status: "active" })} onSelect={vi.fn()} />);
+    expect(screen.queryByTestId("badge-completed")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("badge-deleted")).not.toBeInTheDocument();
+  });
+
+  it("done card has no drag handle element", () => {
+    render(<TaskCard globalIndex={1} task={makeTask({ status: "done" })} onSelect={vi.fn()} />);
+    expect(document.querySelector("[data-drag-handle]")).toBeNull();
+  });
+
+  it("deleted card has no drag handle element", () => {
+    render(<TaskCard globalIndex={1} task={makeTask({ status: "deleted" })} onSelect={vi.fn()} />);
+    expect(document.querySelector("[data-drag-handle]")).toBeNull();
+  });
+
+  it("active card still has drag handle (regression)", () => {
+    render(<TaskCard globalIndex={1} task={makeTask({ status: "active" })} onSelect={vi.fn()} />);
+    expect(document.querySelector("[data-drag-handle]")).not.toBeNull();
+  });
+});

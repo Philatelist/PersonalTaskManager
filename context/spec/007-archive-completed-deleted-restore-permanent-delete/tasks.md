@@ -72,7 +72,7 @@
   - Clicking "Archive" tab calls `taskList` with `statusFilter: "archive"`.
   - Clicking "Active" tab calls `taskList` with `statusFilter: "active"`.
   - Default tab on render is "Active".
-- [ ] Add/update tests in `src/features/tasks/TaskCard.test.tsx`: **[Agent: general-purpose]**
+- [x] Add/update tests in `src/features/tasks/TaskCard.test.tsx`: **[Agent: general-purpose]**
   - Card with `status = "done"` renders "Completed" badge; no "Deleted" badge.
   - Card with `status = "deleted"` renders "Deleted" badge; no "Completed" badge.
   - Card with `status = "active"` renders neither badge.
