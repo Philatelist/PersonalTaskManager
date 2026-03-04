@@ -62,11 +62,11 @@
 
 - [x] Add in-memory `activeTab: "active" | "archive"` state (default `"active"`) to `src/features/tasks/GridView.tsx`. Render a two-tab control ("Active" / "Archive") above the grid. **[Agent: general-purpose]**
 - [x] When `activeTab = "archive"`, fetch tasks with `statusFilter: "archive"`. When `activeTab = "active"`, fetch as before (`statusFilter: "active"`). Dependency highlighting (hover state) is disabled on the archive tab. **[Agent: general-purpose]**
-- [ ] Modify `src/features/tasks/TaskCard.tsx`: when `task.status` is `'done'` or `'deleted'`, render a status badge in the top-right area of the card: **[Agent: general-purpose]**
+- [x] Modify `src/features/tasks/TaskCard.tsx`: when `task.status` is `'done'` or `'deleted'`, render a status badge in the top-right area of the card: **[Agent: general-purpose]**
   - `'done'` → green badge, text "Completed", `data-testid="badge-completed"`.
   - `'deleted'` → grey badge, text "Deleted", `data-testid="badge-deleted"`.
   - Drag handle (`data-drag-handle`) is hidden when `task.status !== 'active'`.
-- [ ] Add `.badgeCompleted` and `.badgeDeleted` CSS classes to `src/features/tasks/TaskCard.module.css` (green and grey pill styles). **[Agent: general-purpose]**
+- [x] Add `.badgeCompleted` and `.badgeDeleted` CSS classes to `src/features/tasks/TaskCard.module.css` (green and grey pill styles). **[Agent: general-purpose]**
 - [ ] Add/update tests in `src/features/tasks/GridView.test.tsx`: **[Agent: general-purpose]**
   - Tab control renders with "Active" and "Archive" labels.
   - Clicking "Archive" tab calls `taskList` with `statusFilter: "archive"`.
