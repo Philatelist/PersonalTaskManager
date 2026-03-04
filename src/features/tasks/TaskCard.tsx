@@ -77,16 +77,25 @@ export function TaskCard({ globalIndex, task, onSelect, onUpdated, onContextMenu
     >
       <span className={styles.priority}>#{globalIndex}</span>
 
-      <button
-        className={styles.dragHandle}
-        data-drag-handle
-        aria-label="Drag to reorder"
-        onClick={(e) => e.stopPropagation()}
-        {...attributes}
-        {...listeners}
-      >
-        ⠿
-      </button>
+      {task.status === "active" && (
+        <button
+          className={styles.dragHandle}
+          data-drag-handle
+          aria-label="Drag to reorder"
+          onClick={(e) => e.stopPropagation()}
+          {...attributes}
+          {...listeners}
+        >
+          ⠿
+        </button>
+      )}
+
+      {task.status === "done" && (
+        <span className={styles.badgeCompleted} data-testid="badge-completed">Completed</span>
+      )}
+      {task.status === "deleted" && (
+        <span className={styles.badgeDeleted} data-testid="badge-deleted">Deleted</span>
+      )}
 
       {(task.isBlocked || task.isCyclic) && (
         <div className={styles.badges}>
