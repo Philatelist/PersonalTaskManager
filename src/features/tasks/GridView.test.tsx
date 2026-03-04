@@ -12,9 +12,13 @@ const mockRefresh = vi.fn();
 const mockSetTasks = vi.fn();
 let mockCols = 3;
 let mockCardsPerPage = 4;
+let capturedStatusFilter: string | undefined;
 
 vi.mock("./use-tasks", () => ({
-  useTasks: () => ({ tasks: mockTasks, setTasks: mockSetTasks, dependencies: mockDependencies, loading: mockLoading, error: null, refresh: mockRefresh }),
+  useTasks: (statusFilter?: string) => {
+    capturedStatusFilter = statusFilter;
+    return { tasks: mockTasks, setTasks: mockSetTasks, dependencies: mockDependencies, loading: mockLoading, error: null, refresh: mockRefresh };
+  },
 }));
 
 vi.mock("./useGridLayout", () => ({
@@ -755,5 +759,41 @@ describe("GridView dependency badge edge cases", () => {
     expect(screen.queryByTestId("cyclic-badge-t1")).not.toBeInTheDocument();
     expect(screen.queryByTestId("cyclic-badge-t2")).not.toBeInTheDocument();
     expect(screen.queryByTestId("blocked-badge-t3")).not.toBeInTheDocument();
+  });
+});
+
+describe("GridView tab control", () => {
+  it("renders tab control with 'Active' and 'Archive' labels", () => {
+    render(<GridView onSelectTask={vi.fn()} />);
+    expect(screen.getByTestId("tab-active")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-archive")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-active")).toHaveTextContent("Active");
+    expect(screen.getByTestId("tab-archive")).toHaveTextContent("Archive");
+  });
+
+  it("default tab on render is 'Active'", () => {
+    render(<GridView onSelectTask={vi.fn()} />);
+    expect(screen.getByTestId("tab-active").className).toContain("tabActive");
+    expect(screen.getByTestId("tab-archive").className).not.toContain("tabActive");
+  });
+
+  it("clicking 'Archive' tab passes statusFilter 'archive' to useTasks", async () => {
+    const user = userEvent.setup();
+    render(<GridView onSelectTask={vi.fn()} />);
+    expect(capturedStatusFilter).toBe("active");
+
+    await user.click(screen.getByTestId("tab-archive"));
+    expect(capturedStatusFilter).toBe("archive");
+  });
+
+  it("clicking 'Active' tab passes statusFilter 'active' to useTasks", async () => {
+    const user = userEvent.setup();
+    render(<GridView onSelectTask={vi.fn()} />);
+
+    await user.click(screen.getByTestId("tab-archive"));
+    expect(capturedStatusFilter).toBe("archive");
+
+    await user.click(screen.getByTestId("tab-active"));
+    expect(capturedStatusFilter).toBe("active");
   });
 });
