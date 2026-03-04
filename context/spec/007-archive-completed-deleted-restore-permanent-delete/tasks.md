@@ -67,7 +67,7 @@
   - `'deleted'` → grey badge, text "Deleted", `data-testid="badge-deleted"`.
   - Drag handle (`data-drag-handle`) is hidden when `task.status !== 'active'`.
 - [x] Add `.badgeCompleted` and `.badgeDeleted` CSS classes to `src/features/tasks/TaskCard.module.css` (green and grey pill styles). **[Agent: general-purpose]**
-- [ ] Add/update tests in `src/features/tasks/GridView.test.tsx`: **[Agent: general-purpose]**
+- [x] Add/update tests in `src/features/tasks/GridView.test.tsx`: **[Agent: general-purpose]**
   - Tab control renders with "Active" and "Archive" labels.
   - Clicking "Archive" tab calls `taskList` with `statusFilter: "archive"`.
   - Clicking "Active" tab calls `taskList` with `statusFilter: "active"`.
