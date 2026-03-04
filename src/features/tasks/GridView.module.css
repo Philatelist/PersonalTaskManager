@@ -7,6 +7,37 @@
   padding: 16px;
 }
 
+.tabBar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.tab {
+  padding: 6px 20px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: #f5f5f5;
+}
+
+.tabActive {
+  background: #1976d2;
+  border-color: #1976d2;
+  color: #fff;
+}
+
+.tabActive:hover {
+  background: #1565c0;
+}
+
 .header {
   display: flex;
   justify-content: flex-end;

@@ -16,7 +16,7 @@ function toDependencyEdge(r: DependencyEdgeResponse): DependencyEdge {
   };
 }
 
-export function useTasks() {
+export function useTasks(statusFilter: string = "active") {
   const [tasks, setTasks] = useState<TaskWithProgress[]>([]);
   const [dependencies, setDependencies] = useState<DependencyEdge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,7 @@ export function useTasks() {
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await taskList({ statusFilter: "active" });
+      const result = await taskList({ statusFilter });
       setTasks(
         result.tasks.map((t) => ({
           ...t,
@@ -39,7 +39,7 @@ export function useTasks() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [statusFilter]);
 
   useEffect(() => {
     refresh();
