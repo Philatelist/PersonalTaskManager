@@ -60,7 +60,7 @@
 >
 > **Acceptance Criteria:** Functional §2.1, §2.2, §2.6
 
-- [ ] Add in-memory `activeTab: "active" | "archive"` state (default `"active"`) to `src/features/tasks/GridView.tsx`. Render a two-tab control ("Active" / "Archive") above the grid. **[Agent: general-purpose]**
+- [x] Add in-memory `activeTab: "active" | "archive"` state (default `"active"`) to `src/features/tasks/GridView.tsx`. Render a two-tab control ("Active" / "Archive") above the grid. **[Agent: general-purpose]**
 - [ ] When `activeTab = "archive"`, fetch tasks with `statusFilter: "archive"`. When `activeTab = "active"`, fetch as before (`statusFilter: "active"`). Dependency highlighting (hover state) is disabled on the archive tab. **[Agent: general-purpose]**
 - [ ] Modify `src/features/tasks/TaskCard.tsx`: when `task.status` is `'done'` or `'deleted'`, render a status badge in the top-right area of the card: **[Agent: general-purpose]**
   - `'done'` → green badge, text "Completed", `data-testid="badge-completed"`.

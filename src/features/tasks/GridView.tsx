@@ -24,7 +24,8 @@ interface GridViewProps {
 }
 
 export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewProps) {
-  const { tasks, setTasks, dependencies, loading, refresh } = useTasks();
+  const [activeTab, setActiveTab] = useState<"active" | "archive">("active");
+  const { tasks, setTasks, dependencies, loading, refresh } = useTasks(activeTab);
   const { cols, cardsPerPage, containerRef } = useGridLayout();
   const [currentPage, setCurrentPage] = useState(initialPage ?? 1);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -64,8 +65,9 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
     return map;
   }, [dependencies]);
 
-  // Compute per-card highlight states based on hovered task
+  // Compute per-card highlight states based on hovered task (disabled on archive tab)
   const highlightStates = useMemo(() => {
+    if (activeTab === "archive") return undefined;
     if (!hoveredTaskId) return undefined;
     const states: Record<string, HighlightState> = {};
     const blockers = blockersByTask.get(hoveredTaskId) ?? new Set();
@@ -215,15 +217,33 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
+      <div className={styles.tabBar} data-testid="tab-bar">
         <button
-          className={styles.addButton}
-          onClick={() => setShowCreateModal(true)}
-          data-testid="add-task-button"
+          className={activeTab === "active" ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+          onClick={() => { setActiveTab("active"); setCurrentPage(1); }}
+          data-testid="tab-active"
         >
-          + Add task
+          Active
         </button>
-        {tasks.length > 0 && (
+        <button
+          className={activeTab === "archive" ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+          onClick={() => { setActiveTab("archive"); setCurrentPage(1); }}
+          data-testid="tab-archive"
+        >
+          Archive
+        </button>
+      </div>
+      <div className={styles.header}>
+        {activeTab === "active" && (
+          <button
+            className={styles.addButton}
+            onClick={() => setShowCreateModal(true)}
+            data-testid="add-task-button"
+          >
+            + Add task
+          </button>
+        )}
+        {activeTab === "active" && tasks.length > 0 && (
           <button
             className={styles.graphButton}
             onClick={() => setShowGraph(true)}
