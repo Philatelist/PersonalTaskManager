@@ -36,21 +36,21 @@
 >
 > **Acceptance Criteria:** Tech §2.2.1, §2.3.1; Functional §2.4
 
-- [ ] Implement `task_permanent_delete_impl(conn, id)` in `src-tauri/src/commands.rs`: **[Agent: general-purpose]**
+- [x] Implement `task_permanent_delete_impl(conn, id)` in `src-tauri/src/commands.rs`: **[Agent: general-purpose]**
   - Guard: return error if `status NOT IN ('done', 'deleted')`.
   - Step 1: `DELETE FROM subtasks WHERE ref_task_id = ?` (cleans taskref refs in other tasks).
   - Step 2: `DELETE FROM tasks WHERE id = ?` (CASCADE handles tags, own subtasks, dep rows).
   - Both steps run in a single transaction.
-- [ ] Add `#[tauri::command] task_permanent_delete(...)` wrapper and register it in `src-tauri/src/main.rs` (`.invoke_handler`). **[Agent: general-purpose]**
-- [ ] Add Rust tests for `task_permanent_delete_impl`: **[Agent: general-purpose]**
+- [x] Add `#[tauri::command] task_permanent_delete(...)` wrapper and register it in `src-tauri/src/main.rs` (`.invoke_handler`). **[Agent: general-purpose]**
+- [x] Add Rust tests for `task_permanent_delete_impl`: **[Agent: general-purpose]**
   - Permanently deletes a `done` task — row removed from `tasks`.
   - Permanently deletes a `deleted` task — row removed.
   - Cleans up taskref subtasks in other tasks pointing to the deleted task.
   - Dep rows (both blocker and dependent directions) removed via CASCADE.
   - Returns an error when called on an `active` task (guard check).
-- [ ] Add `taskPermanentDelete(id: string): Promise<void>` to `src/features/tasks/task-service.ts` — invokes `task_permanent_delete`. **[Agent: general-purpose]**
-- [ ] **Verify:** Run `/Users/alex/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml` — all tests pass. **[Agent: general-purpose]**
-- [ ] **Verify:** Run `npx vitest run` — full frontend suite passes (no regressions from service addition). **[Agent: general-purpose]**
+- [x] Add `taskPermanentDelete(id: string): Promise<void>` to `src/features/tasks/task-service.ts` — invokes `task_permanent_delete`. **[Agent: general-purpose]**
+- [x] **Verify:** Run `/Users/alex/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml` — all tests pass. **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run` — full frontend suite passes (no regressions from service addition). **[Agent: general-purpose]**
 
 ---
 
