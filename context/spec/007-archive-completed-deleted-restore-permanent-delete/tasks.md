@@ -26,7 +26,7 @@
   - Progress for a task with a `deleted` taskref subtask: the deleted ref counts as incomplete.
   - Progress for a task with a `done` taskref subtask: the done ref counts as complete (regression).
   - Dependency DTO includes `status` field with the correct value for `active`, `done`, and `deleted` blockers.
-- [ ] **Verify:** Run `/Users/alex/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml` — all tests pass (new + existing). **[Agent: general-purpose]**
+- [x] **Verify:** Run `/Users/alex/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml` — all tests pass (new + existing). **[Agent: general-purpose]**
 
 ---
 
