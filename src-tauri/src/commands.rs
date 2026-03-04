@@ -3996,4 +3996,135 @@ mod tests {
         let dep_task2 = result2.tasks.iter().find(|t| t.id == dependent.id).unwrap();
         assert!(!dep_task2.is_blocked);
     }
+
+    // ===========================================================================
+    // Slice 1 — Archive backend foundation tests
+    // ===========================================================================
+
+    #[test]
+    fn test_list_tasks_archive_filter_returns_done_and_deleted() {
+        let conn = test_db();
+        let active = create_task_impl(&conn, "Active task".to_string(), None, None, None).unwrap();
+        let done_t = create_task_impl(&conn, "Done task".to_string(), None, None, None).unwrap();
+        let deleted_t = create_task_impl(&conn, "Deleted task".to_string(), None, None, None).unwrap();
+        update_task_impl(&conn, done_t.id.clone(), None, None, Some("done".to_string()), None, None).unwrap();
+        update_task_impl(&conn, deleted_t.id.clone(), None, None, Some("deleted".to_string()), None, None).unwrap();
+
+        let result = list_tasks_impl(&conn, Some("archive".to_string()), None).unwrap();
+        let ids: Vec<&str> = result.tasks.iter().map(|t| t.id.as_str()).collect();
+        assert!(ids.contains(&done_t.id.as_str()), "done task should be in archive");
+        assert!(ids.contains(&deleted_t.id.as_str()), "deleted task should be in archive");
+        assert!(!ids.contains(&active.id.as_str()), "active task must not appear in archive");
+        // All returned tasks should have non-active status.
+        for t in &result.tasks {
+            assert!(t.status == "done" || t.status == "deleted", "unexpected status: {}", t.status);
+        }
+    }
+
+    #[test]
+    fn test_list_tasks_active_filter_excludes_done_and_deleted() {
+        let conn = test_db();
+        let active = create_task_impl(&conn, "Active".to_string(), None, None, None).unwrap();
+        let done_t = create_task_impl(&conn, "Done".to_string(), None, None, None).unwrap();
+        update_task_impl(&conn, done_t.id.clone(), None, None, Some("done".to_string()), None, None).unwrap();
+
+        let result = list_tasks_impl(&conn, Some("active".to_string()), None).unwrap();
+        let ids: Vec<&str> = result.tasks.iter().map(|t| t.id.as_str()).collect();
+        assert!(ids.contains(&active.id.as_str()));
+        assert!(!ids.contains(&done_t.id.as_str()), "done task must not appear in active list");
+    }
+
+    #[test]
+    fn test_is_blocked_false_when_blocker_is_deleted() {
+        let conn = test_db();
+        let blocker = create_task_impl(&conn, "Blocker".to_string(), None, None, None).unwrap();
+        let dependent = create_task_impl(&conn, "Dependent".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, blocker.id.clone(), dependent.id.clone()).unwrap();
+
+        // Soft-delete the blocker.
+        update_task_impl(&conn, blocker.id.clone(), None, None, Some("deleted".to_string()), None, None).unwrap();
+
+        let result = list_tasks_impl(&conn, Some("active".to_string()), None).unwrap();
+        let dep = result.tasks.iter().find(|t| t.id == dependent.id).unwrap();
+        assert!(!dep.is_blocked, "deleted blocker should not block the dependent");
+        assert!(dep.unsatisfied_blocker_names.is_empty(), "unsatisfied_blocker_names should be empty with deleted blocker");
+    }
+
+    #[test]
+    fn test_is_blocked_true_when_blocker_is_active() {
+        let conn = test_db();
+        let blocker = create_task_impl(&conn, "Active Blocker".to_string(), None, None, None).unwrap();
+        let dependent = create_task_impl(&conn, "Dependent".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, blocker.id.clone(), dependent.id.clone()).unwrap();
+
+        let result = list_tasks_impl(&conn, Some("active".to_string()), None).unwrap();
+        let dep = result.tasks.iter().find(|t| t.id == dependent.id).unwrap();
+        assert!(dep.is_blocked, "active blocker should block the dependent");
+        assert!(dep.unsatisfied_blocker_names.contains(&"Active Blocker".to_string()));
+    }
+
+    #[test]
+    fn test_is_blocked_false_when_blocker_is_done() {
+        let conn = test_db();
+        let blocker = create_task_impl(&conn, "Done Blocker".to_string(), None, None, None).unwrap();
+        let dependent = create_task_impl(&conn, "Dependent".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, blocker.id.clone(), dependent.id.clone()).unwrap();
+        update_task_impl(&conn, blocker.id.clone(), None, None, Some("done".to_string()), None, None).unwrap();
+
+        let result = list_tasks_impl(&conn, Some("active".to_string()), None).unwrap();
+        let dep = result.tasks.iter().find(|t| t.id == dependent.id).unwrap();
+        assert!(!dep.is_blocked, "done blocker should not block the dependent");
+        assert!(dep.unsatisfied_blocker_names.is_empty());
+    }
+
+    #[test]
+    fn test_progress_deleted_taskref_is_done_false() {
+        let conn = test_db();
+        let ref_task = create_task_impl(&conn, "Ref task".to_string(), None, None, None).unwrap();
+        let parent = create_task_impl(&conn, "Parent".to_string(), None, None, None).unwrap();
+        create_subtask_impl(&conn, parent.id.clone(), "taskref".to_string(), None, Some(ref_task.id.clone())).unwrap();
+
+        // Soft-delete the referenced task.
+        update_task_impl(&conn, ref_task.id.clone(), None, None, Some("deleted".to_string()), None, None).unwrap();
+
+        let fetched = get_task_impl(&conn, parent.id.clone()).unwrap();
+        assert_eq!(fetched.subtasks.len(), 1);
+        assert_eq!(fetched.subtasks[0].is_done, Some(false), "deleted ref should count as incomplete");
+    }
+
+    #[test]
+    fn test_progress_done_taskref_is_done_true() {
+        let conn = test_db();
+        let ref_task = create_task_impl(&conn, "Ref task".to_string(), None, None, None).unwrap();
+        let parent = create_task_impl(&conn, "Parent".to_string(), None, None, None).unwrap();
+        create_subtask_impl(&conn, parent.id.clone(), "taskref".to_string(), None, Some(ref_task.id.clone())).unwrap();
+
+        update_task_impl(&conn, ref_task.id.clone(), None, None, Some("done".to_string()), None, None).unwrap();
+
+        let fetched = get_task_impl(&conn, parent.id.clone()).unwrap();
+        assert_eq!(fetched.subtasks[0].is_done, Some(true), "done ref should count as complete");
+    }
+
+    #[test]
+    fn test_dependency_dto_task_status_field() {
+        let conn = test_db();
+        let blocker = create_task_impl(&conn, "Blocker".to_string(), None, None, None).unwrap();
+        let dependent = create_task_impl(&conn, "Dependent".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, blocker.id.clone(), dependent.id.clone()).unwrap();
+
+        // Active blocker → task_status = "active"
+        let dep_task = get_task_impl(&conn, dependent.id.clone()).unwrap();
+        assert_eq!(dep_task.blockers.len(), 1);
+        assert_eq!(dep_task.blockers[0].task_status, "active");
+
+        // Done blocker → task_status = "done"
+        update_task_impl(&conn, blocker.id.clone(), None, None, Some("done".to_string()), None, None).unwrap();
+        let dep_task2 = get_task_impl(&conn, dependent.id.clone()).unwrap();
+        assert_eq!(dep_task2.blockers[0].task_status, "done");
+
+        // Deleted blocker → task_status = "deleted"
+        update_task_impl(&conn, blocker.id.clone(), None, None, Some("deleted".to_string()), None, None).unwrap();
+        let dep_task3 = get_task_impl(&conn, dependent.id.clone()).unwrap();
+        assert_eq!(dep_task3.blockers[0].task_status, "deleted");
+    }
 }
