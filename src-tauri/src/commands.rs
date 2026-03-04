@@ -4186,4 +4186,118 @@ mod tests {
         let dep_task3 = get_task_impl(&conn, dependent.id.clone()).unwrap();
         assert_eq!(dep_task3.blockers[0].task_status, "deleted");
     }
+
+    // --- task_permanent_delete_impl tests ---
+
+    #[test]
+    fn test_permanent_delete_done_task_removes_row() {
+        let conn = test_db();
+        let task = create_task_impl(&conn, "Done Task".to_string(), None, None, None).unwrap();
+        update_task_impl(&conn, task.id.clone(), None, None, Some("done".to_string()), None, None).unwrap();
+
+        task_permanent_delete_impl(&conn, task.id.clone()).unwrap();
+
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM tasks WHERE id = ?1", rusqlite::params![task.id], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_permanent_delete_deleted_task_removes_row() {
+        let conn = test_db();
+        let task = create_task_impl(&conn, "Deleted Task".to_string(), None, None, None).unwrap();
+        delete_task_impl(&conn, task.id.clone()).unwrap();
+
+        task_permanent_delete_impl(&conn, task.id.clone()).unwrap();
+
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM tasks WHERE id = ?1", rusqlite::params![task.id], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_permanent_delete_cleans_taskref_subtasks_in_other_tasks() {
+        let conn = test_db();
+        // Task B is the target to permanently delete.
+        let task_b = create_task_impl(&conn, "Task B".to_string(), None, None, None).unwrap();
+        // Task A has a taskref subtask pointing to task B.
+        let task_a = create_task_impl(&conn, "Task A".to_string(), None, None, None).unwrap();
+        create_subtask_impl(
+            &conn,
+            task_a.id.clone(),
+            "taskref".to_string(),
+            None,
+            Some(task_b.id.clone()),
+        )
+        .unwrap();
+
+        // Verify taskref row exists.
+        let ref_count_before: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM subtasks WHERE ref_task_id = ?1",
+                rusqlite::params![task_b.id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(ref_count_before, 1);
+
+        // Soft-delete task B then permanently delete.
+        delete_task_impl(&conn, task_b.id.clone()).unwrap();
+        task_permanent_delete_impl(&conn, task_b.id.clone()).unwrap();
+
+        // Taskref row should be gone.
+        let ref_count_after: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM subtasks WHERE ref_task_id = ?1",
+                rusqlite::params![task_b.id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(ref_count_after, 0);
+    }
+
+    #[test]
+    fn test_permanent_delete_removes_dep_rows_via_cascade() {
+        let conn = test_db();
+        let blocker = create_task_impl(&conn, "Blocker".to_string(), None, None, None).unwrap();
+        let dependent = create_task_impl(&conn, "Dependent".to_string(), None, None, None).unwrap();
+        create_dependency_impl(&conn, blocker.id.clone(), dependent.id.clone()).unwrap();
+
+        // Verify dep row exists.
+        let dep_count_before: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM task_dependencies WHERE blocker_task_id = ?1 OR dependent_task_id = ?1",
+                rusqlite::params![blocker.id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(dep_count_before, 1);
+
+        // Soft-delete blocker then permanently delete.
+        delete_task_impl(&conn, blocker.id.clone()).unwrap();
+        task_permanent_delete_impl(&conn, blocker.id.clone()).unwrap();
+
+        // Dep row should be gone via CASCADE.
+        let dep_count_after: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM task_dependencies WHERE blocker_task_id = ?1 OR dependent_task_id = ?1",
+                rusqlite::params![blocker.id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(dep_count_after, 0);
+    }
+
+    #[test]
+    fn test_permanent_delete_returns_error_for_active_task() {
+        let conn = test_db();
+        let task = create_task_impl(&conn, "Active Task".to_string(), None, None, None).unwrap();
+
+        let result = task_permanent_delete_impl(&conn, task.id.clone());
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("active"), "Expected error about active status, got: {}", err);
+    }
 }
