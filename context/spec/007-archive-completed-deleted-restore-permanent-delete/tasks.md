@@ -48,9 +48,9 @@
   - Cleans up taskref subtasks in other tasks pointing to the deleted task.
   - Dep rows (both blocker and dependent directions) removed via CASCADE.
   - Returns an error when called on an `active` task (guard check).
-- [ ] Add `taskPermanentDelete(id: string): Promise<void>` to `src/features/tasks/task-service.ts` — invokes `task_permanent_delete`. **[Agent: general-purpose]**
-- [ ] **Verify:** Run `/Users/alex/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml` — all tests pass. **[Agent: general-purpose]**
-- [ ] **Verify:** Run `npx vitest run` — full frontend suite passes (no regressions from service addition). **[Agent: general-purpose]**
+- [x] Add `taskPermanentDelete(id: string): Promise<void>` to `src/features/tasks/task-service.ts` — invokes `task_permanent_delete`. **[Agent: general-purpose]**
+- [x] **Verify:** Run `/Users/alex/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml` — all tests pass. **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run` — full frontend suite passes (no regressions from service addition). **[Agent: general-purpose]**
 
 ---
 

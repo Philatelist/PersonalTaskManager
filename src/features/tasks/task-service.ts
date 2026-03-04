@@ -147,6 +147,10 @@ export async function taskDelete(id: string): Promise<void> {
   await invoke<void>("task_delete", { id });
 }
 
+export async function taskPermanentDelete(id: string): Promise<void> {
+  await invoke<void>("task_permanent_delete", { id });
+}
+
 export async function taskReorder(
   taskId: string,
   afterId?: string,
