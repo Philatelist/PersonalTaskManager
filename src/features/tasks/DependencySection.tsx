@@ -75,6 +75,12 @@ export function DependencySection({
             >
               {b.taskStatus === "deleted" ? "Deleted task" : b.taskTitle}
             </span>
+            {b.taskStatus === "done" && (
+              <span className={styles.depLabelCompleted} data-testid="dep-label-completed">(Completed)</span>
+            )}
+            {b.taskStatus === "deleted" && (
+              <span className={styles.depLabelDeleted} data-testid="dep-label-deleted">(Deleted)</span>
+            )}
             <span className={statusBadgeClass(b.taskStatus)} data-testid={`blocker-badge-${b.id}`}>
               {b.taskStatus}
             </span>
@@ -111,6 +117,12 @@ export function DependencySection({
             >
               {d.taskStatus === "deleted" ? "Deleted task" : d.taskTitle}
             </span>
+            {d.taskStatus === "done" && (
+              <span className={styles.depLabelCompleted} data-testid="dep-label-completed">(Completed)</span>
+            )}
+            {d.taskStatus === "deleted" && (
+              <span className={styles.depLabelDeleted} data-testid="dep-label-deleted">(Deleted)</span>
+            )}
             <span className={statusBadgeClass(d.taskStatus)} data-testid={`dependent-badge-${d.id}`}>
               {d.taskStatus}
             </span>
