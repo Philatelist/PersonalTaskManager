@@ -3,6 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TaskCardContextMenu } from "./TaskCardContextMenu";
 
+vi.mock("./task-service", () => ({
+  taskUpdate: vi.fn().mockResolvedValue(undefined),
+  taskPermanentDelete: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { taskUpdate } from "./task-service";
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -59,5 +66,47 @@ describe("TaskCardContextMenu", () => {
     fireEvent.mouseDown(screen.getByTestId("context-menu"));
     // onClose should NOT be called from outside-click (only from item selection)
     expect(defaultProps.onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("TaskCardContextMenu archive mode", () => {
+  const archiveProps = {
+    position: { x: 100, y: 200 },
+    taskId: "t1",
+    taskStatus: "done",
+    taskTitle: "My Task",
+    onMoveToTop: vi.fn(),
+    onMoveToBottom: vi.fn(),
+    onClose: vi.fn(),
+    onRefresh: vi.fn(),
+  };
+
+  it("archive card shows Restore and Permanently Delete", () => {
+    render(<TaskCardContextMenu {...archiveProps} />);
+    expect(screen.getByTestId("context-menu-restore")).toBeInTheDocument();
+    expect(screen.getByTestId("context-menu-perm-delete")).toBeInTheDocument();
+    expect(screen.queryByText("Move to Top")).not.toBeInTheDocument();
+    expect(screen.queryByText("Move to Bottom")).not.toBeInTheDocument();
+  });
+
+  it("active card does not show Restore or Permanently Delete", () => {
+    render(<TaskCardContextMenu {...archiveProps} taskStatus="active" />);
+    expect(screen.queryByTestId("context-menu-restore")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("context-menu-perm-delete")).not.toBeInTheDocument();
+    expect(screen.getByText("Move to Top")).toBeInTheDocument();
+  });
+
+  it("clicking Restore calls taskUpdate with status active", async () => {
+    const user = userEvent.setup();
+    render(<TaskCardContextMenu {...archiveProps} />);
+    await user.click(screen.getByTestId("context-menu-restore"));
+    expect(taskUpdate).toHaveBeenCalledWith("t1", { status: "active" });
+  });
+
+  it("clicking Permanently Delete shows ConfirmDialog", async () => {
+    const user = userEvent.setup();
+    render(<TaskCardContextMenu {...archiveProps} />);
+    await user.click(screen.getByTestId("context-menu-perm-delete"));
+    expect(screen.getByTestId("confirm-dialog")).toBeInTheDocument();
   });
 });
