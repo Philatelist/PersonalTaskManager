@@ -14,6 +14,8 @@ import styles from "./GridView.module.css";
 
 interface ContextMenuState {
   taskId: string;
+  taskStatus: string;
+  taskTitle: string;
   position: { x: number; y: number };
 }
 
@@ -191,9 +193,10 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
 
   const handleCardContextMenu = useCallback(
     (taskId: string, position: { x: number; y: number }) => {
-      setContextMenu({ taskId, position });
+      const task = tasks.find((t) => t.id === taskId);
+      setContextMenu({ taskId, position, taskStatus: task?.status ?? "active", taskTitle: task?.title ?? "" });
     },
-    [],
+    [tasks],
   );
 
   const handleCardMouseEnter = useCallback((taskId: string) => {
@@ -284,9 +287,12 @@ export function GridView({ onSelectTask, initialPage, onPageChange }: GridViewPr
             <TaskCardContextMenu
               position={contextMenu.position}
               taskId={contextMenu.taskId}
+              taskStatus={contextMenu.taskStatus}
+              taskTitle={contextMenu.taskTitle}
               onMoveToTop={handleMoveToTop}
               onMoveToBottom={handleMoveToBottom}
               onClose={() => setContextMenu(null)}
+              onRefresh={refresh}
             />
           )}
         </>
