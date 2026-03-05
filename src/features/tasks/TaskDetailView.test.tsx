@@ -350,19 +350,21 @@ describe("TaskDetailView", () => {
     vi.restoreAllMocks();
   });
 
-  it("Reactivate calls taskUpdate with status active", async () => {
+  it("Reactivate calls taskUpdate with status active (active task reactivate via StatusActions)", async () => {
+    // For active tasks, StatusActions provides reactivate; for archived tasks, the Restore button is used.
+    // This test is covered by the archive restore tests below.
+    // Archived task (done) shows Restore button, not reactivate-button.
     mockedTaskGet.mockResolvedValue({ ...sampleTask, status: "done" });
     mockedTaskUpdate.mockResolvedValue({} as never);
+    const onBack = vi.fn();
     render(
-      <TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />,
+      <TaskDetailView taskId="t1" priorityIndex={1} onBack={onBack} />,
     );
     await screen.findByTestId("task-detail-view");
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("reactivate-button"));
-    });
-
-    expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", { status: "active" });
+    // done task shows Restore button, not reactivate-button
+    expect(screen.queryByTestId("reactivate-button")).not.toBeInTheDocument();
+    expect(screen.getByTestId("restore-btn")).toBeInTheDocument();
   });
 
   it("subtask toggle calls subtaskUpdate then refresh", async () => {

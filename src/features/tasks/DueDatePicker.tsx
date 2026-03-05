@@ -6,6 +6,7 @@ interface DueDatePickerProps {
   dueDate: string | null;
   onChange: (date: string | null) => void;
   status?: string;
+  readOnly?: boolean;
 }
 
 function formatDate(dateStr: string): string {
@@ -17,7 +18,7 @@ function formatDate(dateStr: string): string {
   });
 }
 
-export function DueDatePicker({ dueDate, onChange, status }: DueDatePickerProps) {
+export function DueDatePicker({ dueDate, onChange, status, readOnly }: DueDatePickerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const urgency = getUrgency(dueDate, status ?? "active");
   const overdueText = urgency ? formatOverdueText(urgency.daysRemaining) : null;
@@ -73,7 +74,7 @@ export function DueDatePicker({ dueDate, onChange, status }: DueDatePickerProps)
       )}
       <button
         className={`${styles.display} ${urgency?.tier === "overdue" ? styles.overdue : ""} ${!dueDate ? styles.placeholder : ""}`}
-        onClick={() => setIsEditing(true)}
+        onClick={() => { if (!readOnly) setIsEditing(true); }}
         data-testid="due-date-display"
       >
         {dueDate ? formatDate(dueDate) : "No due date"}

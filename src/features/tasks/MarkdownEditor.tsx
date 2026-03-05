@@ -17,12 +17,14 @@ interface MarkdownEditorProps {
   value: string;
   onChange: (newValue: string) => void;
   onBlur?: () => void;
+  readOnly?: boolean;
 }
 
 export function MarkdownEditor({
   value,
   onChange,
   onBlur,
+  readOnly,
 }: MarkdownEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -86,6 +88,7 @@ export function MarkdownEditor({
   }
 
   function enterEdit() {
+    if (readOnly) return;
     setIsEditing(true);
   }
 

@@ -93,7 +93,7 @@
 - [x] Modify `src/features/tasks/TaskCardContextMenu.tsx`: when `task.status` is `'done'` or `'deleted'`, show "Restore" and "Permanently Delete" options instead of the active-mode items. **[Agent: general-purpose]**
   - "Restore" calls `taskUpdate(id, { status: "active" })` then triggers a grid refresh.
   - "Permanently Delete" opens `ConfirmDialog`; on confirm, calls `taskPermanentDelete(id)` then triggers a grid refresh.
-- [ ] Modify `src/features/tasks/TaskDetailView.tsx`: detect archived state (`task.status === 'done' || task.status === 'deleted'`): **[Agent: general-purpose]**
+- [x] Modify `src/features/tasks/TaskDetailView.tsx`: detect archived state (`task.status === 'done' || task.status === 'deleted'`): **[Agent: general-purpose]**
   - Pass `readOnly={true}` (or equivalent) to `EditableTitle`, `MarkdownEditor`, `TagEditor`, `DueDatePicker` so they suppress edit interactions.
   - Replace `StatusActions` with two buttons: "Restore" (`data-testid="restore-btn"`) and "Permanently Delete" (`data-testid="perm-delete-btn"`).
   - "Restore": calls `taskUpdate(id, { status: "active" })`, then calls `onBack()`.

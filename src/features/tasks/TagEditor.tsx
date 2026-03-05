@@ -5,9 +5,10 @@ interface TagEditorProps {
   tags: string[];
   onAdd: (tag: string) => void;
   onRemove: (tag: string) => void;
+  readOnly?: boolean;
 }
 
-export function TagEditor({ tags, onAdd, onRemove }: TagEditorProps) {
+export function TagEditor({ tags, onAdd, onRemove, readOnly }: TagEditorProps) {
   const [inputValue, setInputValue] = useState("");
   const sortedTags = [...tags].sort();
 
@@ -29,28 +30,32 @@ export function TagEditor({ tags, onAdd, onRemove }: TagEditorProps) {
           {sortedTags.map((tag) => (
             <span key={tag} className={styles.chip} data-testid={`tag-chip-${tag}`}>
               {tag}
-              <button
-                className={styles.removeButton}
-                onClick={() => onRemove(tag)}
-                aria-label={`Remove tag ${tag}`}
-                data-testid={`tag-remove-${tag}`}
-              >
-                ×
-              </button>
+              {!readOnly && (
+                <button
+                  className={styles.removeButton}
+                  onClick={() => onRemove(tag)}
+                  aria-label={`Remove tag ${tag}`}
+                  data-testid={`tag-remove-${tag}`}
+                >
+                  ×
+                </button>
+              )}
             </span>
           ))}
         </div>
       )}
-      <input
-        className={styles.input}
-        type="text"
-        placeholder="Add tag..."
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        aria-label="Add tag"
-        data-testid="tag-input"
-      />
+      {!readOnly && (
+        <input
+          className={styles.input}
+          type="text"
+          placeholder="Add tag..."
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          aria-label="Add tag"
+          data-testid="tag-input"
+        />
+      )}
     </div>
   );
 }
