@@ -98,7 +98,7 @@
   - Replace `StatusActions` with two buttons: "Restore" (`data-testid="restore-btn"`) and "Permanently Delete" (`data-testid="perm-delete-btn"`).
   - "Restore": calls `taskUpdate(id, { status: "active" })`, then calls `onBack()`.
   - "Permanently Delete": opens `ConfirmDialog`; on confirm, calls `taskPermanentDelete(id)`, then calls `onBack()`.
-- [ ] Create `src/features/tasks/ConfirmDialog.test.tsx`: **[Agent: general-purpose]**
+- [x] Create `src/features/tasks/ConfirmDialog.test.tsx`: **[Agent: general-purpose]**
   - Renders with correct title and message.
   - Clicking "Cancel" calls `onCancel`; does not call `onConfirm`.
   - Clicking the confirm button calls `onConfirm`; does not call `onCancel`.
