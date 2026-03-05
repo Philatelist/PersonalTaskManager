@@ -102,7 +102,7 @@
   - Renders with correct title and message.
   - Clicking "Cancel" calls `onCancel`; does not call `onConfirm`.
   - Clicking the confirm button calls `onConfirm`; does not call `onCancel`.
-- [ ] Add/update tests in `src/features/tasks/TaskCardContextMenu.test.tsx`: **[Agent: general-purpose]**
+- [x] Add/update tests in `src/features/tasks/TaskCardContextMenu.test.tsx`: **[Agent: general-purpose]**
   - Archive card context menu shows "Restore" and "Permanently Delete".
   - Active card context menu does not show "Restore" or "Permanently Delete".
   - Clicking "Restore" calls `taskUpdate` with `status: "active"`.
