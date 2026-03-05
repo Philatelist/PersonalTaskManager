@@ -107,7 +107,7 @@
   - Active card context menu does not show "Restore" or "Permanently Delete".
   - Clicking "Restore" calls `taskUpdate` with `status: "active"`.
   - Clicking "Permanently Delete" shows the `ConfirmDialog`.
-- [ ] Add/update tests in `src/features/tasks/TaskDetailView.test.tsx` (archived task): **[Agent: general-purpose]**
+- [x] Add/update tests in `src/features/tasks/TaskDetailView.test.tsx` (archived task): **[Agent: general-purpose]**
   - "Restore" button is rendered for a `done` task; clicking it calls `taskUpdate` with `status: "active"` and then `onBack`.
   - "Restore" button is rendered for a `deleted` task.
   - "Permanently Delete" button is rendered; clicking it opens `ConfirmDialog`; confirming calls `taskPermanentDelete` then `onBack`.
