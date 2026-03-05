@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTask } from "./use-task";
-import { taskUpdate, taskDelete, subtaskUpdate, subtaskDelete } from "./task-service";
+import { taskUpdate, taskDelete, taskPermanentDelete, subtaskUpdate, subtaskDelete } from "./task-service";
 import { StatusActions } from "./StatusActions";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { SubtaskSection } from "./SubtaskSection";
 import { EditableTitle } from "./EditableTitle";
 import { MarkdownEditor } from "./MarkdownEditor";
@@ -33,6 +34,7 @@ export function TaskDetailView({
 }: TaskDetailViewProps) {
   const { task, setTask, loading, refresh } = useTask(taskId);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showPermDeleteConfirm, setShowPermDeleteConfirm] = useState(false);
   const hasRedirected = useRef(false);
   const titleValueRef = useRef<string>("");
   const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -169,6 +171,24 @@ export function TaskDetailView({
     }
   }, [taskId, onBack]);
 
+  const handleRestore = useCallback(async () => {
+    try {
+      await taskUpdate(taskId, { status: "active" });
+      onBack();
+    } catch {
+      setToastMessage("Failed to restore task");
+    }
+  }, [taskId, onBack]);
+
+  const handlePermanentDelete = useCallback(async () => {
+    try {
+      await taskPermanentDelete(taskId);
+      onBack();
+    } catch {
+      setToastMessage("Failed to permanently delete task");
+    }
+  }, [taskId, onBack]);
+
   const handleSubtaskToggle = useCallback(
     async (subtaskId: string, isDone: boolean) => {
       if (task) {
@@ -264,6 +284,7 @@ export function TaskDetailView({
 
   const statusClass =
     task.status === "active" ? styles.statusActive : styles.statusDone;
+  const isArchived = task.status === "done" || task.status === "deleted";
 
   return (
     <div className={styles.container} data-testid="task-detail-view">
@@ -275,7 +296,7 @@ export function TaskDetailView({
         &larr; Back to Grid
       </button>
 
-      <EditableTitle value={task.title} onSave={handleTitleSave} />
+      <EditableTitle value={task.title} onSave={handleTitleSave} readOnly={isArchived} />
 
       <div className={styles.metadata} data-testid="task-metadata">
         <span
@@ -293,6 +314,7 @@ export function TaskDetailView({
           dueDate={task.dueDate}
           onChange={handleDueDateChange}
           status={task.status}
+          readOnly={isArchived}
         />
       </div>
 
@@ -307,6 +329,7 @@ export function TaskDetailView({
           tags={task.tags}
           onAdd={handleAddTag}
           onRemove={handleRemoveTag}
+          readOnly={isArchived}
         />
       </div>
 
@@ -316,6 +339,7 @@ export function TaskDetailView({
           value={task.description ?? ""}
           onChange={handleDescriptionChange}
           onBlur={handleDescriptionFlush}
+          readOnly={isArchived}
         />
       </div>
 
@@ -337,12 +361,41 @@ export function TaskDetailView({
         onUpdated={refresh}
       />
 
-      <StatusActions
-        status={task.status}
-        onMarkDone={handleMarkDone}
-        onReactivate={handleReactivate}
-        onDelete={handleDelete}
-      />
+      {isArchived ? (
+        <div className={styles.archiveActions}>
+          <button
+            className={styles.restoreBtn}
+            onClick={handleRestore}
+            data-testid="restore-btn"
+          >
+            Restore
+          </button>
+          <button
+            className={styles.permDeleteBtn}
+            onClick={() => setShowPermDeleteConfirm(true)}
+            data-testid="perm-delete-btn"
+          >
+            Permanently Delete
+          </button>
+        </div>
+      ) : (
+        <StatusActions
+          status={task.status}
+          onMarkDone={handleMarkDone}
+          onReactivate={handleReactivate}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {showPermDeleteConfirm && (
+        <ConfirmDialog
+          title="Permanently Delete Task"
+          message={`Permanently delete '${task.title}'? This cannot be undone.`}
+          confirmLabel="Delete Forever"
+          onConfirm={handlePermanentDelete}
+          onCancel={() => setShowPermDeleteConfirm(false)}
+        />
+      )}
 
       {toastMessage && (
         <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />

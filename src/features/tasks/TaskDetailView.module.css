@@ -126,3 +126,41 @@
   min-height: 200px;
   color: #999;
 }
+
+.archiveActions {
+  display: flex;
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 8px;
+}
+
+.restoreBtn {
+  padding: 8px 20px;
+  border: 1px solid #1976d2;
+  border-radius: 6px;
+  background: #1976d2;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.restoreBtn:hover {
+  background: #1565c0;
+}
+
+.permDeleteBtn {
+  padding: 8px 20px;
+  border: 1px solid #d32f2f;
+  border-radius: 6px;
+  background: transparent;
+  color: #d32f2f;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.permDeleteBtn:hover {
+  background: #ffebee;
+}

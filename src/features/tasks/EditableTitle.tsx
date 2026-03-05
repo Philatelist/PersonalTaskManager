@@ -4,9 +4,10 @@ import styles from "./EditableTitle.module.css";
 interface EditableTitleProps {
   value: string;
   onSave: (newTitle: string) => Promise<void>;
+  readOnly?: boolean;
 }
 
-export function EditableTitle({ value, onSave }: EditableTitleProps) {
+export function EditableTitle({ value, onSave, readOnly }: EditableTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -27,6 +28,7 @@ export function EditableTitle({ value, onSave }: EditableTitleProps) {
   }, [isEditing]);
 
   function handleClick() {
+    if (readOnly) return;
     setEditValue(value);
     setIsEditing(true);
   }
