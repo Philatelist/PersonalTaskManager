@@ -113,7 +113,7 @@
   - "Permanently Delete" button is rendered; clicking it opens `ConfirmDialog`; confirming calls `taskPermanentDelete` then `onBack`.
   - "Permanently Delete" is NOT rendered for an `active` task.
   - `EditableTitle` is in read-only mode for archived tasks (clicking does not open an edit input).
-- [ ] **Verify:** Run `npx vitest run` — all tests pass. **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run` — all tests pass. **[Agent: general-purpose]**
 
 ---
 
