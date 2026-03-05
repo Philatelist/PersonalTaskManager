@@ -90,7 +90,7 @@
 
 - [x] Create `src/features/tasks/ConfirmDialog.tsx`: a modal overlay with props `title`, `message`, `confirmLabel`, `onConfirm`, `onCancel`. Confirm button uses destructive (red) styling. `data-testid="confirm-dialog"`, `data-testid="confirm-btn"`, `data-testid="cancel-btn"`. **[Agent: general-purpose]**
 - [x] Create `src/features/tasks/ConfirmDialog.module.css` with overlay, dialog box, and button styles. **[Agent: general-purpose]**
-- [ ] Modify `src/features/tasks/TaskCardContextMenu.tsx`: when `task.status` is `'done'` or `'deleted'`, show "Restore" and "Permanently Delete" options instead of the active-mode items. **[Agent: general-purpose]**
+- [x] Modify `src/features/tasks/TaskCardContextMenu.tsx`: when `task.status` is `'done'` or `'deleted'`, show "Restore" and "Permanently Delete" options instead of the active-mode items. **[Agent: general-purpose]**
   - "Restore" calls `taskUpdate(id, { status: "active" })` then triggers a grid refresh.
   - "Permanently Delete" opens `ConfirmDialog`; on confirm, calls `taskPermanentDelete(id)` then triggers a grid refresh.
 - [ ] Modify `src/features/tasks/TaskDetailView.tsx`: detect archived state (`task.status === 'done' || task.status === 'deleted'`): **[Agent: general-purpose]**
