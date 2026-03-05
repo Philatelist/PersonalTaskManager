@@ -1,11 +1,13 @@
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, waitFor } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("./task-service", () => ({
   taskGet: vi.fn().mockResolvedValue(null),
   taskUpdate: vi.fn().mockResolvedValue({}),
   taskDelete: vi.fn().mockResolvedValue(undefined),
+  taskPermanentDelete: vi.fn().mockResolvedValue(undefined),
   subtaskUpdate: vi.fn().mockResolvedValue({}),
   subtaskDelete: vi.fn().mockResolvedValue(undefined),
   subtaskCreate: vi.fn().mockResolvedValue({}),
@@ -16,11 +18,12 @@ vi.mock("./task-service", () => ({
 }));
 
 import { TaskDetailView } from "./TaskDetailView";
-import { taskGet, taskUpdate, taskDelete, subtaskUpdate, subtaskDelete } from "./task-service";
+import { taskGet, taskUpdate, taskDelete, taskPermanentDelete, subtaskUpdate, subtaskDelete } from "./task-service";
 
 const mockedTaskGet = vi.mocked(taskGet);
 const mockedTaskUpdate = vi.mocked(taskUpdate);
 const mockedTaskDelete = vi.mocked(taskDelete);
+const mockedTaskPermanentDelete = vi.mocked(taskPermanentDelete);
 const mockedSubtaskUpdate = vi.mocked(subtaskUpdate);
 const mockedSubtaskDelete = vi.mocked(subtaskDelete);
 
@@ -521,5 +524,70 @@ describe("TaskDetailView", () => {
     expect(await screen.findByTestId("toast")).toHaveTextContent(
       "Cannot mark as done. Blocked by: Setup Database, Write Tests",
     );
+  });
+});
+
+describe("TaskDetailView archived task", () => {
+  const doneTask = { ...sampleTask, status: "done" as const };
+  const deletedTask = { ...sampleTask, status: "deleted" as const };
+
+  it("Restore button is rendered for a done task; clicking calls taskUpdate with status active and onBack", async () => {
+    mockedTaskGet.mockResolvedValue(doneTask);
+    mockedTaskUpdate.mockResolvedValue({} as never);
+    const onBack = vi.fn();
+    render(<TaskDetailView taskId="t1" priorityIndex={1} onBack={onBack} />);
+    await screen.findByTestId("task-detail-view");
+
+    expect(screen.getByTestId("restore-btn")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("restore-btn"));
+
+    await waitFor(() => {
+      expect(mockedTaskUpdate).toHaveBeenCalledWith("t1", { status: "active" });
+      expect(onBack).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("Restore button is rendered for a deleted task", async () => {
+    mockedTaskGet.mockResolvedValue(deletedTask);
+    render(<TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />);
+    await screen.findByTestId("task-detail-view");
+
+    expect(screen.getByTestId("restore-btn")).toBeInTheDocument();
+  });
+
+  it("Permanently Delete button opens ConfirmDialog; confirming calls taskPermanentDelete then onBack", async () => {
+    mockedTaskGet.mockResolvedValue(doneTask);
+    mockedTaskPermanentDelete.mockResolvedValue(undefined as never);
+    const onBack = vi.fn();
+    render(<TaskDetailView taskId="t1" priorityIndex={1} onBack={onBack} />);
+    await screen.findByTestId("task-detail-view");
+
+    fireEvent.click(screen.getByTestId("perm-delete-btn"));
+    expect(screen.getByTestId("confirm-dialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("confirm-btn"));
+
+    await waitFor(() => {
+      expect(mockedTaskPermanentDelete).toHaveBeenCalledWith("t1");
+      expect(onBack).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("Permanently Delete is NOT rendered for an active task", async () => {
+    mockedTaskGet.mockResolvedValue(sampleTask);
+    render(<TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />);
+    await screen.findByTestId("task-detail-view");
+
+    expect(screen.queryByTestId("perm-delete-btn")).not.toBeInTheDocument();
+  });
+
+  it("EditableTitle is in read-only mode for archived tasks (clicking does not open edit input)", async () => {
+    mockedTaskGet.mockResolvedValue(doneTask);
+    render(<TaskDetailView taskId="t1" priorityIndex={1} onBack={vi.fn()} />);
+    await screen.findByTestId("task-detail-view");
+
+    fireEvent.click(screen.getByTestId("task-title"));
+    expect(screen.queryByTestId("editable-title-input")).not.toBeInTheDocument();
   });
 });
