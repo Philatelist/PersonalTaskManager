@@ -78,7 +78,7 @@
   - Card with `status = "active"` renders neither badge.
   - Card with `status = "done"` or `"deleted"` has no drag handle element.
   - Card with `status = "active"` still has a drag handle (regression).
-- [ ] **Verify:** Run `npx vitest run` — all tests pass. **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run` — all tests pass. **[Agent: general-purpose]**
 
 ---
 
