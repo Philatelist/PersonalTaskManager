@@ -129,7 +129,7 @@
   - Blocker with `status = "done"` shows "(Completed)" label; no "(Deleted)" label.
   - Blocker with `status = "deleted"` shows "(Deleted)" label; no "(Completed)" label.
   - Blocker with `status = "active"` shows no label (regression).
-- [ ] Add/update tests in `src/features/tasks/SubtaskItem.test.tsx`: **[Agent: general-purpose]**
+- [x] Add/update tests in `src/features/tasks/SubtaskItem.test.tsx`: **[Agent: general-purpose]**
   - Taskref subtask with `ref_task_status = "deleted"` is unchecked and shows "(Deleted)" marker.
   - Taskref subtask with `ref_task_status = "deleted"` checkbox is not interactive (click does not fire onChange).
   - Taskref subtask with `ref_task_status = "done"` is checked (regression).
