@@ -144,7 +144,7 @@
 >
 > **Acceptance Criteria:** All prior slices integrated; no regressions
 
-- [ ] **Verify:** Run `npx vitest run` — full frontend test suite passes (all test files). **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run` — full frontend test suite passes (all test files). **[Agent: general-purpose]**
 - [ ] **Verify:** Run `/Users/alex/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml` — all Rust tests pass. **[Agent: general-purpose]**
 
 ---
