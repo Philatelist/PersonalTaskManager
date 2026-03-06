@@ -71,6 +71,12 @@ export function SubtaskItem({ subtask, onToggle, onDelete }: SubtaskItemProps) {
         {displayLabel}
       </span>
 
+      {isDeletedRef && (
+        <span className={styles.refDeletedLabel} data-testid="ref-deleted-label">
+          (Deleted)
+        </span>
+      )}
+
       {isTaskRef && !isDeletedRef && subtask.refTaskStatus && (
         <span
           className={`${styles.refStatusBadge}${subtask.refTaskStatus === "done" ? ` ${styles.refStatusDone}` : ""}`}
