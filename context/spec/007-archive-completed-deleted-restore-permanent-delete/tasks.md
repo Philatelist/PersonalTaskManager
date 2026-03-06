@@ -125,7 +125,7 @@
 
 - [x] Modify `src/features/tasks/DependencySection.tsx`: for each blocker/dependent entry, read its `status` field and append a label: `'done'` → "(Completed)" (muted green, `data-testid="dep-label-completed"`); `'deleted'` → "(Deleted)" (muted grey, `data-testid="dep-label-deleted"`); `'active'` → no label. **[Agent: general-purpose]**
 - [x] Modify `src/features/tasks/SubtaskItem.tsx`: when `ref_task_status = "deleted"`, render the taskref subtask as unchecked with a `"(Deleted)"` marker (`data-testid="ref-deleted-label"`); the checkbox is non-interactive. When `ref_task_status = "done"`, render as checked (existing behaviour). **[Agent: general-purpose]**
-- [ ] Add/update tests in `src/features/tasks/DependencySection.test.tsx`: **[Agent: general-purpose]**
+- [x] Add/update tests in `src/features/tasks/DependencySection.test.tsx`: **[Agent: general-purpose]**
   - Blocker with `status = "done"` shows "(Completed)" label; no "(Deleted)" label.
   - Blocker with `status = "deleted"` shows "(Deleted)" label; no "(Completed)" label.
   - Blocker with `status = "active"` shows no label (regression).

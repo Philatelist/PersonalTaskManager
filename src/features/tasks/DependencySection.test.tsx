@@ -227,6 +227,50 @@ describe("DependencySection", () => {
     expect(screen.getByText("Dependencies")).toBeInTheDocument();
   });
 
+  it("blocker with status done shows (Completed) label; no (Deleted) label", () => {
+    render(
+      <DependencySection
+        taskId="t1"
+        blockers={[makeBlocker({ id: "dep-done", taskStatus: "done", taskTitle: "Done Task" })]}
+        dependents={[]}
+        onUpdated={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("dep-label-completed")).toBeInTheDocument();
+    expect(screen.getByTestId("dep-label-completed")).toHaveTextContent("(Completed)");
+    expect(screen.queryByTestId("dep-label-deleted")).not.toBeInTheDocument();
+  });
+
+  it("blocker with status deleted shows (Deleted) label; no (Completed) label", () => {
+    render(
+      <DependencySection
+        taskId="t1"
+        blockers={[makeBlocker({ id: "dep-del", taskStatus: "deleted", taskTitle: "Original" })]}
+        dependents={[]}
+        onUpdated={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("dep-label-deleted")).toBeInTheDocument();
+    expect(screen.getByTestId("dep-label-deleted")).toHaveTextContent("(Deleted)");
+    expect(screen.queryByTestId("dep-label-completed")).not.toBeInTheDocument();
+  });
+
+  it("blocker with status active shows no archive label", () => {
+    render(
+      <DependencySection
+        taskId="t1"
+        blockers={[makeBlocker()]}
+        dependents={[]}
+        onUpdated={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("dep-label-completed")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("dep-label-deleted")).not.toBeInTheDocument();
+  });
+
   it("shows cycle warning toast when dependencyCreate returns isCyclic: true", async () => {
     mockedDependencyCreate.mockResolvedValueOnce({
       edge: { id: "new-dep", blockerTaskId: "t5", dependentTaskId: "t1" },
