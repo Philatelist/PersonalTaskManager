@@ -134,7 +134,7 @@
   - Taskref subtask with `ref_task_status = "deleted"` checkbox is not interactive (click does not fire onChange).
   - Taskref subtask with `ref_task_status = "done"` is checked (regression).
   - Taskref subtask with `ref_task_status = "active"` is unchecked, no "(Deleted)" marker (regression).
-- [ ] **Verify:** Run `npx vitest run` — all tests pass. **[Agent: general-purpose]**
+- [x] **Verify:** Run `npx vitest run` — all tests pass. **[Agent: general-purpose]**
 
 ---
 
