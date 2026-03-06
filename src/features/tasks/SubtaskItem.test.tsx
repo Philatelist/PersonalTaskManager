@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DndContext } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -135,5 +136,62 @@ describe("SubtaskItem", () => {
     expect(screen.getByTestId("subtask-checkbox-s6")).toBeDisabled();
     // No status badge for deleted ref
     expect(screen.queryByTestId("subtask-ref-status-s6")).not.toBeInTheDocument();
+  });
+});
+
+describe("SubtaskItem deleted taskref label", () => {
+  const deletedRef: Subtask = {
+    id: "s10",
+    taskId: "t1",
+    type: "taskref",
+    label: null,
+    isDone: false,
+    refTaskId: "t2",
+    refTaskTitle: "Old Task",
+    refTaskStatus: "deleted",
+    sortOrder: 1,
+  };
+
+  const doneRef: Subtask = {
+    ...deletedRef,
+    id: "s11",
+    refTaskStatus: "done",
+    refTaskTitle: "Done Task",
+  };
+
+  const activeRef: Subtask = {
+    ...deletedRef,
+    id: "s12",
+    refTaskStatus: "active",
+    refTaskTitle: "Active Task",
+  };
+
+  it("taskref with deleted ref_task_status is unchecked and shows (Deleted) marker", () => {
+    renderWithDnd(deletedRef);
+    expect(screen.getByTestId("subtask-checkbox-s10")).not.toBeChecked();
+    expect(screen.getByTestId("ref-deleted-label")).toBeInTheDocument();
+    expect(screen.getByTestId("ref-deleted-label")).toHaveTextContent("(Deleted)");
+  });
+
+  it("taskref with deleted ref_task_status checkbox is not interactive (disabled)", async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    renderWithDnd(deletedRef, { onToggle });
+    const checkbox = screen.getByTestId("subtask-checkbox-s10");
+    expect(checkbox).toBeDisabled();
+    await user.click(checkbox);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it("taskref with done ref_task_status is checked (regression)", () => {
+    renderWithDnd(doneRef);
+    expect(screen.getByTestId("subtask-checkbox-s11")).toBeChecked();
+    expect(screen.queryByTestId("ref-deleted-label")).not.toBeInTheDocument();
+  });
+
+  it("taskref with active ref_task_status is unchecked and has no (Deleted) marker (regression)", () => {
+    renderWithDnd(activeRef);
+    expect(screen.getByTestId("subtask-checkbox-s12")).not.toBeChecked();
+    expect(screen.queryByTestId("ref-deleted-label")).not.toBeInTheDocument();
   });
 });
