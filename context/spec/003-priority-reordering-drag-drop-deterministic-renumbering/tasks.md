@@ -5,7 +5,7 @@
 
 ---
 
-- [ ] **Slice 1: Global priority numbering + install @dnd-kit**
+- [x] **Slice 1: Global priority numbering + install @dnd-kit**
   *The smallest foundational change: fix priority numbers from page-relative to global, and install the DnD dependency. After this slice, page 2 correctly shows #11, #12, etc. instead of #1, #2. No drag behavior yet — just the numbering fix and the dependency ready for Slice 2.*
   *Acceptance criteria covered: priority numbers reflect global position across all pages; numbers are sequential with no gaps or duplicates.*
   - [x] Install `@dnd-kit/core`, `@dnd-kit/sortable`, and `@dnd-kit/utilities` via `pnpm add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities`. Verify the packages appear in `package.json` dependencies and `pnpm install` succeeds. **[Agent: general-purpose]**

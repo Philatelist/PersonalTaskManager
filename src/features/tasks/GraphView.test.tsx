@@ -10,6 +10,7 @@ let capturedEdges: Array<{ id: string; source: string; target: string }> = [];
 let capturedOnNodeClick: ((event: React.MouseEvent, node: { id: string }) => void) | undefined;
 
 vi.mock("@xyflow/react", () => {
+  const { useState } = require("react");
   const Position = { Top: "top", Bottom: "bottom", Left: "left", Right: "right" };
   const MarkerType = { ArrowClosed: "arrowclosed" };
   return {
@@ -50,8 +51,16 @@ vi.mock("@xyflow/react", () => {
     Handle: function MockHandle({ type, position }: { type: string; position: string }) {
       return <div data-testid={`handle-${type}-${position}`} />;
     },
-    Position: { Top: "top", Bottom: "bottom", Left: "left", Right: "right" },
-    MarkerType: { ArrowClosed: "arrowclosed" },
+    useNodesState: function MockUseNodesState(initial: unknown[]) {
+      const [nodes, setNodes] = useState(initial);
+      return [nodes, setNodes, vi.fn()];
+    },
+    useEdgesState: function MockUseEdgesState(initial: unknown[]) {
+      const [edges, setEdges] = useState(initial);
+      return [edges, setEdges, vi.fn()];
+    },
+    Position,
+    MarkerType,
   };
 });
 
@@ -206,14 +215,14 @@ describe("GraphView", () => {
     expect(screen.getByText("Graph View")).toBeInTheDocument();
   });
 
-  it("renders edge toggle with default 'Dependencies only'", () => {
+  it("renders edge toggle with default 'Dependencies + Subtask refs'", () => {
     render(
       <GraphView tasks={makeTasks(2)} dependencies={[]} onSelectTask={vi.fn()} onClose={vi.fn()} />,
     );
 
     const toggle = screen.getByTestId("graph-edge-toggle") as HTMLSelectElement;
     expect(toggle).toBeInTheDocument();
-    expect(toggle.value).toBe("dependencies");
+    expect(toggle.value).toBe("all");
   });
 
   it("dependency edges appear in both modes", async () => {
@@ -226,16 +235,16 @@ describe("GraphView", () => {
       <GraphView tasks={tasks} dependencies={deps} onSelectTask={vi.fn()} onClose={vi.fn()} />,
     );
 
-    // Dependencies mode (default)
+    // "all" mode (default)
     expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
 
-    // Switch to "all" mode
-    await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "all");
+    // Switch to "dependencies" mode
+    await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "dependencies");
 
     expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
   });
 
-  it("taskref edges appear only in combined mode", async () => {
+  it("taskref edges hidden in dependencies-only mode", async () => {
     const user = userEvent.setup();
     const tasks = makeTasks(2);
     tasks[0].subtasks = [
@@ -255,13 +264,13 @@ describe("GraphView", () => {
       <GraphView tasks={tasks} dependencies={[]} onSelectTask={vi.fn()} onClose={vi.fn()} />,
     );
 
-    // Default mode: no taskref edges
-    expect(screen.queryByTestId("flow-edge-taskref-t1-t2")).not.toBeInTheDocument();
-
-    // Switch to "all" mode
-    await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "all");
-
+    // Default "all" mode: taskref edges visible
     expect(screen.getByTestId("flow-edge-taskref-t1-t2")).toBeInTheDocument();
+
+    // Switch to "dependencies" mode
+    await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "dependencies");
+
+    expect(screen.queryByTestId("flow-edge-taskref-t1-t2")).not.toBeInTheDocument();
   });
 
   it("toggle switches edge modes correctly", async () => {
@@ -287,19 +296,19 @@ describe("GraphView", () => {
       <GraphView tasks={tasks} dependencies={deps} onSelectTask={vi.fn()} onClose={vi.fn()} />,
     );
 
-    // Default: only dependency edges
-    expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
-    expect(screen.queryByTestId("flow-edge-taskref-t1-t2")).not.toBeInTheDocument();
-
-    // Switch to "all"
-    await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "all");
+    // Default "all": both edge types visible
     expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
     expect(screen.getByTestId("flow-edge-taskref-t1-t2")).toBeInTheDocument();
 
-    // Switch back to "dependencies"
+    // Switch to "dependencies"
     await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "dependencies");
     expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
     expect(screen.queryByTestId("flow-edge-taskref-t1-t2")).not.toBeInTheDocument();
+
+    // Switch back to "all"
+    await user.selectOptions(screen.getByTestId("graph-edge-toggle"), "all");
+    expect(screen.getByTestId("flow-edge-dep1")).toBeInTheDocument();
+    expect(screen.getByTestId("flow-edge-taskref-t1-t2")).toBeInTheDocument();
   });
 
   it("cyclic edges get the cyclic-edge class", () => {
