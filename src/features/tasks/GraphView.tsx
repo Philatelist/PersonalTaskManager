@@ -5,6 +5,8 @@ import {
   Handle,
   Position,
   MarkerType,
+  useNodesState,
+  useEdgesState,
   type Node,
   type Edge,
   type NodeProps,
@@ -106,7 +108,7 @@ export function GraphView({
   onSelectTask,
   onClose,
 }: GraphViewProps) {
-  const [edgeMode, setEdgeMode] = useState<EdgeMode>("dependencies");
+  const [edgeMode, setEdgeMode] = useState<EdgeMode>("all");
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -132,9 +134,11 @@ export function GraphView({
           type: "default",
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            ...(isCyclicEdge ? { color: "#e65100" } : {}),
+            ...(isCyclicEdge ? { color: "#e65100" } : { color: "#555" }),
           },
-          style: isCyclicEdge ? { stroke: "#e65100", strokeWidth: 2 } : undefined,
+          style: isCyclicEdge
+            ? { stroke: "#e65100", strokeWidth: 2 }
+            : { stroke: "#555", strokeWidth: 1.5 },
           className: isCyclicEdge ? "cyclic-edge" : undefined,
           data: { edgeType: "dependency", isCyclic: isCyclicEdge },
         };
@@ -162,15 +166,27 @@ export function GraphView({
     return edges;
   }, [tasks]);
 
-  const allEdges = useMemo(
+  const computedEdges = useMemo(
     () => edgeMode === "all" ? [...dependencyEdges, ...taskrefEdges] : dependencyEdges,
     [edgeMode, dependencyEdges, taskrefEdges],
   );
 
-  const nodes = useMemo(
-    () => layoutNodes(tasks, allEdges),
-    [tasks, allEdges],
+  const initialNodes = useMemo(
+    () => layoutNodes(tasks, computedEdges),
+    [tasks, computedEdges],
   );
+
+  const [rfNodes, setRfNodes, onNodesChange] = useNodesState(initialNodes);
+  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(computedEdges);
+
+  // Sync when props or edge mode change
+  useEffect(() => {
+    setRfNodes(initialNodes);
+  }, [initialNodes, setRfNodes]);
+
+  useEffect(() => {
+    setRfEdges(computedEdges);
+  }, [computedEdges, setRfEdges]);
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -204,8 +220,10 @@ export function GraphView({
       </div>
       <div className={styles.flowContainer} data-testid="graph-flow-container">
         <ReactFlow
-          nodes={nodes}
-          edges={allEdges}
+          nodes={rfNodes}
+          edges={rfEdges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           onNodeClick={handleNodeClick}
           fitView
