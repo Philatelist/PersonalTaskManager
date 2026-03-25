@@ -1,7 +1,7 @@
 # Functional Specification: Local Persistence + Autosave + Backups + Conflicted Copy
 
 - **Roadmap Item:** Local-First Storage Engine
-- **Status:** Draft
+- **Status:** Approved
 - **Author:** AWOS
 
 ---
